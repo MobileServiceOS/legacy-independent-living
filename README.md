@@ -75,18 +75,23 @@ Then commit the regenerated `.html` files.
 
 After changing any of these, re-run `build.mjs` + `validate.mjs`.
 
-### Using your exact illustrated logo (optional)
+### Logo assets
 
-The shipped logo is a clean, on-brand **vector recreation** of the family-tree-house
-mark. To use your original illustrated artwork instead:
+The site uses the supplied illustrated artwork. The master is
+`assets/img/source-logo.png` (2200×700 banner). Everything else is derived from it:
 
-1. Save your high-res logo as `assets/img/logo.png` (≈760px+ wide, transparent or white bg).
-2. Regenerate the favicon from it:
-   ```bash
-   sips -z 64 64 assets/img/logo.png --out assets/img/favicon.png
-   ```
-3. (Optional) Update the header/hero to point at the raster instead of the SVG,
-   and refresh `assets/img/og-image.png` with a 1200×630 share card.
+| File | What it is | How it's made |
+|------|------------|---------------|
+| `source-logo.png` | Master banner (keep this) | supplied artwork |
+| `logo.png` | Hero + schema logo (banner, 1200w) | `sips --resampleWidth 1200 source-logo.png --out logo.png` |
+| `logo-mark.png` | Round header/footer mark (256², just the emblem) | square crop of the circular scene |
+| `favicon.png` | 64² favicon | `sips -z 64 64 logo-mark.png` (from the emblem crop) |
+| `og-image.png` | 1200×630 social card | banner centered on a branded background |
+
+To replace the logo later, drop a new `source-logo.png` and regenerate `logo.png`
++ `favicon.png` with the `sips` commands above. The emblem crop (`logo-mark.png`)
+was cut from the banner's circular scene (top-center) — re-crop if the new art
+has a different layout.
 
 ## SEO notes
 
