@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" role="img" aria-label="Legacy Independent Living — a family walking a path home beneath a tree">
+  <rect width="600" height="600" fill="none"/>
+  <!-- big arcing branch enclosing the scene -->
+  <path d="M120 250 C170 110, 430 90, 500 250" fill="none" stroke="#634C2C" stroke-width="6" stroke-linecap="round"/>
+  <g fill="#8FA05A">
+    <ellipse cx="190" cy="150" rx="20" ry="11" transform="rotate(-32 190 150)"/>
+    <ellipse cx="250" cy="120" rx="20" ry="11" transform="rotate(-16 250 120)"/>
+    <ellipse cx="315" cy="112" rx="20" ry="11" transform="rotate(2 315 112)"/>
+    <ellipse cx="380" cy="120" rx="20" ry="11" transform="rotate(18 380 120)"/>
+    <ellipse cx="440" cy="150" rx="20" ry="11" transform="rotate(36 440 150)"/>
+  </g>
+  <g fill="#A8B06A" opacity=".9">
+    <ellipse cx="222" cy="135" rx="14" ry="8" transform="rotate(-24 222 135)"/>
+    <ellipse cx="348" cy="113" rx="14" ry="8" transform="rotate(10 348 113)"/>
+  </g>
+
+  <!-- tree (left) -->
+  <path d="M150 430 C140 330, 150 250, 178 215" fill="none" stroke="#634C2C" stroke-width="16" stroke-linecap="round"/>
+  <path d="M165 320 C150 305, 135 300, 120 305" fill="none" stroke="#634C2C" stroke-width="7" stroke-linecap="round"/>
+  <g fill="#7E814C">
+    <circle cx="175" cy="210" r="46"/><circle cx="128" cy="240" r="34"/><circle cx="220" cy="240" r="38"/><circle cx="172" cy="262" r="38"/>
+  </g>
+  <g fill="#8FA05A"><circle cx="150" cy="218" r="20"/><circle cx="205" cy="218" r="20"/><circle cx="178" cy="250" r="18"/></g>
+
+  <!-- house (right) -->
+  <g>
+    <rect x="392" y="300" width="118" height="104" fill="#F5E8D5" stroke="#634C2C" stroke-width="4"/>
+    <path d="M378 304 L451 240 L524 304 Z" fill="#4A5533"/>
+    <path d="M451 240 L524 304" fill="none" stroke="#3A431F" stroke-width="4"/>
+    <rect x="430" y="332" width="42" height="42" fill="#4A5533"/>
+    <line x1="451" y1="332" x2="451" y2="374" stroke="#F5E8D5" stroke-width="3"/>
+    <line x1="430" y1="353" x2="472" y2="353" stroke="#F5E8D5" stroke-width="3"/>
+  </g>
+
+  <!-- ground hills + winding path -->
+  <path d="M40 470 C180 440, 430 440, 560 470 L560 600 L40 600 Z" fill="#A8B06A"/>
+  <path d="M60 470 C200 452, 420 452, 540 470 L540 540 C400 524, 220 524, 60 540 Z" fill="#8FA05A" opacity=".55"/>
+  <path d="M250 600 C268 520, 350 470, 440 446 C360 486, 322 540, 322 600 Z" fill="#F3EEE2"/>
+
+  <!-- family: adult, child, adult walking toward the house -->
+  <g fill="#4A5533">
+    <circle cx="250" cy="392" r="22"/>
+    <path d="M228 420 q22 -16 44 0 l-5 86 -12 0 -4 -50 -4 50 -12 0 Z"/>
+    <circle cx="305" cy="410" r="15"/>
+    <path d="M291 430 q14 -11 28 0 l-4 64 -8 0 -3 -38 -3 38 -8 0 Z"/>
+    <circle cx="356" cy="390" r="21"/>
+    <path d="M335 418 q21 -15 42 0 l-5 84 -11 0 -5 -50 -4 50 -11 0 Z"/>
+  </g>
+
+  <!-- small leaf flourish at base -->
+  <g fill="#8FA05A" opacity=".9">
+    <path d="M300 566 q-12 -14 -26 -10 q7 15 26 10 Z"/>
+    <path d="M300 566 q12 -14 26 -10 q-7 15 -26 10 Z"/>
+  </g>
+</svg>
