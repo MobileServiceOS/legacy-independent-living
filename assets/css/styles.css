@@ -74,6 +74,8 @@ p { margin: 0 0 1rem; }
 .measure { max-width: 65ch; }
 .center .measure, .center .lede { margin-inline: auto; }
 
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
 /* ---------- Skip link ---------- */
 .skip-link {
   position: absolute; left: 12px; top: -100px;
@@ -152,7 +154,7 @@ p { margin: 0 0 1rem; }
 }
 .hero__grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(1.5rem, 4vw, 3rem); align-items: center; }
 .hero--center { max-width: 900px; margin-inline: auto; text-align: center; }
-.hero--center .hero__logo { width: min(580px, 94%); margin: 0 auto clamp(1rem, 3vw, 1.6rem); }
+.hero--center .hero__logo { width: min(440px, 82%); margin: 0 auto clamp(.6rem, 2vw, 1.1rem); }
 .hero--center .lede { margin-inline: auto; }
 .hero--center .hero__cta { justify-content: center; }
 .hero--center .hero__addr { justify-content: center; }

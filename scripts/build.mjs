@@ -483,7 +483,8 @@ pages.push({
   <section class="hero">
     <div class="container">
       <div class="hero--center">
-        <img class="hero__logo" src="assets/img/logo.png" width="1040" height="331" alt="Legacy Independent Living — a family walking home beneath a tree. Live well. Live independently. Live legacy.">
+        <img class="hero__logo" src="assets/img/logo.png" width="1100" height="1100" alt="Legacy Independent Living — a family walking home beneath a tree. Live well. Live independently. Live legacy.">
+        <p class="visually-hidden">${esc(BIZ.tagline)}</p>
         <h1>Supportive Transitional Housing in ${esc(BIZ.city)}, Texas</h1>
         <p class="lede">Legacy Independent Living is a stable, sober, and dignified home for adults rebuilding their lives — in reentry, after treatment, or simply ready for a fresh start. You bring the determination; we provide the structure, support, and community to help it last.</p>
         <div class="hero__cta">
