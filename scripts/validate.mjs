@@ -96,7 +96,7 @@ robots.includes(`Sitemap: ${DOMAIN}/sitemap.xml`) ? ok("robots references sitema
 robots.includes("Allow: /") ? ok("robots allows crawl") : fail("robots missing Allow");
 
 // 9) required files
-for (const f of [".nojekyll", "assets/css/styles.css", "assets/js/main.js", "assets/img/logo.png", "assets/img/favicon.png", "assets/img/og-image.png", "assets/img/logo.svg", "assets/img/logo-mark.svg"]) {
+for (const f of [".nojekyll", "assets/css/styles.css", "assets/js/main.js", "assets/img/logo.png", "assets/img/favicon.png", "assets/img/og-image.png", "assets/img/logo-mark.png", "assets/img/source-logo.png"]) {
   existsSync(join(ROOT, f)) ? ok(`exists: ${f}`) : fail(`MISSING: ${f}`);
 }
 

@@ -259,9 +259,9 @@ ${
 <meta name="twitter:description" content="${esc(page.description)}">
 <meta name="twitter:image" content="${OG_IMAGE}">
 
-<link rel="icon" type="image/svg+xml" href="${p}assets/img/logo-mark.svg">
 <link rel="icon" type="image/png" sizes="64x64" href="${p}assets/img/favicon.png">
-<link rel="apple-touch-icon" href="${p}assets/img/favicon.png">
+<link rel="icon" type="image/png" sizes="256x256" href="${p}assets/img/logo-mark.png">
+<link rel="apple-touch-icon" href="${p}assets/img/logo-mark.png">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -290,7 +290,7 @@ function header(page) {
   return `<header class="site-header">
   <div class="container site-header__inner">
     <a class="brand" href="${h}" aria-label="${esc(BIZ.name)} — home">
-      <img class="brand__mark" src="${p}assets/img/logo-mark.svg" width="44" height="44" alt="" aria-hidden="true">
+      <img class="brand__mark" src="${p}assets/img/logo-mark.png" width="44" height="44" alt="" aria-hidden="true">
       <span class="brand__name">Legacy<small>Independent Living</small></span>
     </a>
     <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle menu"><span></span></button>
@@ -314,7 +314,7 @@ function footer(page) {
     <div class="footer-grid">
       <div>
         <div class="footer-brand">
-          <img src="${p}assets/img/logo-mark.svg" width="48" height="48" alt="${esc(BIZ.name)} logo">
+          <img src="${p}assets/img/logo-mark.png" width="48" height="48" alt="${esc(BIZ.name)} logo">
           <span style="font-family:var(--serif);font-size:1.35rem;color:#fff;">${esc(BIZ.name)}</span>
         </div>
         <p style="max-width:36ch;color:#c9ccb6;">${esc(BIZ.tagline)} Supportive transitional &amp; reentry housing in ${esc(BIZ.city)}, ${esc(BIZ.county)}.</p>
@@ -482,20 +482,15 @@ pages.push({
   body: `
   <section class="hero">
     <div class="container">
-      <div class="hero__grid">
-        <div>
-          <h1>Supportive Transitional Housing in ${esc(BIZ.city)}, Texas</h1>
-          <p class="tagline">${esc(BIZ.tagline)}</p>
-          <p class="lede">Legacy Independent Living is a stable, sober, and dignified home for adults rebuilding their lives — in reentry, after treatment, or simply ready for a fresh start. You bring the determination; we provide the structure, support, and community to help it last.</p>
-          <div class="hero__cta">
-            <a class="btn btn--primary" href="#contact">Inquire about a room</a>
-            <a class="btn btn--ghost" href="tel:${BIZ.phoneTel}">Call ${esc(BIZ.phoneDisplay)}</a>
-          </div>
-          <p class="hero__addr">${ICONS.pin}&nbsp;${esc(NAP)} &middot; ${esc(BIZ.county)}</p>
+      <div class="hero--center">
+        <img class="hero__logo" src="assets/img/logo.png" width="1040" height="331" alt="Legacy Independent Living — a family walking home beneath a tree. Live well. Live independently. Live legacy.">
+        <h1>Supportive Transitional Housing in ${esc(BIZ.city)}, Texas</h1>
+        <p class="lede">Legacy Independent Living is a stable, sober, and dignified home for adults rebuilding their lives — in reentry, after treatment, or simply ready for a fresh start. You bring the determination; we provide the structure, support, and community to help it last.</p>
+        <div class="hero__cta">
+          <a class="btn btn--primary" href="#contact">Inquire about a room</a>
+          <a class="btn btn--ghost" href="tel:${BIZ.phoneTel}">Call ${esc(BIZ.phoneDisplay)}</a>
         </div>
-        <div>
-          <img class="hero__logo" src="assets/img/logo.svg" width="420" height="420" alt="Legacy Independent Living — a family walking home beneath a tree, logo">
-        </div>
+        <p class="hero__addr">${ICONS.pin}&nbsp;${esc(NAP)} &middot; ${esc(BIZ.county)}</p>
       </div>
     </div>
   </section>
