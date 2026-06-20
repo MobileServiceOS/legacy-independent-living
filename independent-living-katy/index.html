@@ -33,13 +33,340 @@
 <meta name="twitter:image" content="https://legacyindependentliving.net/assets/img/og-image.png">
 
 <link rel="icon" type="image/png" sizes="64x64" href="../assets/img/favicon.png">
-<link rel="icon" type="image/png" sizes="256x256" href="../assets/img/logo-mark.png">
-<link rel="apple-touch-icon" href="../assets/img/logo-mark.png">
+<link rel="apple-touch-icon" href="../assets/img/favicon.png">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Mulish:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../assets/css/styles.css">
+<link rel="preload" as="font" type="font/woff2" href="../assets/fonts/mulish-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="../assets/fonts/cormorantgaramond-600.woff2" crossorigin>
+<style>@font-face{font-family:"Cormorant Garamond";font-style:normal;font-weight:500;font-display:swap;src:url("../assets/fonts/cormorantgaramond-500.woff2") format("woff2")}@font-face{font-family:"Cormorant Garamond";font-style:normal;font-weight:600;font-display:swap;src:url("../assets/fonts/cormorantgaramond-600.woff2") format("woff2")}@font-face{font-family:"Cormorant Garamond";font-style:normal;font-weight:700;font-display:swap;src:url("../assets/fonts/cormorantgaramond-700.woff2") format("woff2")}@font-face{font-family:"Cormorant Garamond";font-style:italic;font-weight:500;font-display:swap;src:url("../assets/fonts/cormorantgaramond-500-italic.woff2") format("woff2")}@font-face{font-family:"Cormorant Garamond";font-style:italic;font-weight:600;font-display:swap;src:url("../assets/fonts/cormorantgaramond-600-italic.woff2") format("woff2")}@font-face{font-family:"Mulish";font-style:normal;font-weight:400;font-display:swap;src:url("../assets/fonts/mulish-400.woff2") format("woff2")}@font-face{font-family:"Mulish";font-style:normal;font-weight:600;font-display:swap;src:url("../assets/fonts/mulish-600.woff2") format("woff2")}@font-face{font-family:"Mulish";font-style:normal;font-weight:700;font-display:swap;src:url("../assets/fonts/mulish-700.woff2") format("woff2")}@font-face{font-family:"Mulish";font-style:normal;font-weight:800;font-display:swap;src:url("../assets/fonts/mulish-800.woff2") format("woff2")}/* =========================================================================
+   Legacy Independent Living — single source of truth
+   Brand system derived from the logo (tree + family + house).
+   ========================================================================= */
+
+/* Self-hosted @font-face rules are injected inline by build.mjs (per-page paths). */
+
+:root {
+  /* Greens */
+  --forest: #4A5533;
+  --forest-deep: #3A431F;
+  --sage: #7E814C;
+  --sage-light: #A8B06A;
+  --leaf: #8FA05A;
+  /* Browns */
+  --trunk: #634C2C;
+  --brown-soft: #7C6549;
+  /* Neutrals */
+  --cream: #F5E8D5;
+  --paper: #FBF8F1;
+  --paper-2: #F3EEE2;
+  --ink: #2E2A22;
+  --white: #ffffff;
+
+  --maxw: 1120px;
+  --gap: clamp(1rem, 3vw, 2rem);
+  --radius: 14px;
+  --radius-lg: 22px;
+  --shadow: 0 10px 30px rgba(46, 42, 34, 0.10);
+  --shadow-sm: 0 4px 14px rgba(46, 42, 34, 0.08);
+
+  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --sans: "Mulish", system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+
+  --header-h: 76px;
+}
+
+/* ---------- Reset / base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 12px); }
+body {
+  margin: 0;
+  font-family: var(--sans);
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.65;
+  font-size: 1.0625rem;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+img, svg { max-width: 100%; height: auto; display: block; }
+a { color: var(--forest); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+a:hover { color: var(--forest-deep); }
+
+h1, h2, h3 { font-family: var(--serif); color: var(--forest-deep); line-height: 1.12; font-weight: 600; margin: 0 0 .5em; letter-spacing: .2px; }
+h1 { font-size: clamp(2.4rem, 6vw, 4rem); }
+h2 { font-size: clamp(1.9rem, 4.4vw, 2.9rem); }
+h3 { font-size: clamp(1.3rem, 2.4vw, 1.6rem); }
+p { margin: 0 0 1rem; }
+.lede { font-size: clamp(1.12rem, 2.2vw, 1.4rem); color: #4a463c; max-width: 60ch; }
+
+/* ---------- Layout helpers ---------- */
+.container { width: min(100% - 2 * var(--gap), var(--maxw)); margin-inline: auto; }
+.section { padding: clamp(3.2rem, 8vw, 6rem) 0; }
+.section--tight { padding: clamp(2.4rem, 5vw, 3.6rem) 0; }
+.eyebrow {
+  font-family: var(--sans);
+  text-transform: uppercase;
+  letter-spacing: .18em;
+  font-size: .8rem;
+  font-weight: 800;
+  color: #5f6234;
+  margin: 0 0 .6rem;
+}
+.center { text-align: center; }
+.measure { max-width: 65ch; }
+.center .measure, .center .lede { margin-inline: auto; }
+
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- Skip link ---------- */
+.skip-link {
+  position: absolute; left: 12px; top: -100px;
+  background: var(--forest-deep); color: #fff; padding: .6rem 1rem;
+  border-radius: 8px; z-index: 1000; transition: top .15s ease;
+}
+.skip-link:focus { top: 12px; color:#fff; }
+
+/* ---------- Header ---------- */
+.site-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(251, 248, 241, 0.88);
+  backdrop-filter: saturate(140%) blur(8px);
+  border-bottom: 1px solid rgba(99, 76, 44, 0.14);
+}
+.site-header__inner {
+  display: flex; align-items: center; gap: 1rem;
+  height: var(--header-h);
+}
+.brand { display: flex; align-items: center; gap: .65rem; font-family: var(--serif); font-weight: 600; color: var(--forest-deep); text-decoration: none; }
+.brand:hover { color: var(--forest-deep); }
+.brand__mark { width: 44px; height: 44px; border-radius: 50%; background: var(--white); box-shadow: var(--shadow-sm); padding: 3px; flex: 0 0 auto; }
+.brand__name { font-size: 1.28rem; line-height: 1; letter-spacing: .3px; }
+.brand__name small { display:block; font-family: var(--sans); font-weight:800; font-size:.56rem; letter-spacing:.22em; text-transform:uppercase; color: var(--brown-soft); margin-top:3px; }
+
+.nav { margin-left: auto; }
+.nav__list { list-style: none; display: flex; gap: 1.35rem; margin: 0; padding: 0; align-items: center; }
+.nav__list a { font-family: var(--sans); font-weight: 700; font-size: .96rem; color: var(--forest-deep); text-decoration: none; }
+.nav__list a:hover { color: var(--sage); }
+.btn-cta-wrap { margin-left: 1rem; }
+
+.nav-toggle {
+  display: none; margin-left: auto;
+  background: var(--forest); color: #fff; border: 0; border-radius: 10px;
+  width: 46px; height: 42px; cursor: pointer; align-items: center; justify-content: center;
+}
+.nav-toggle:focus-visible { outline: 3px solid var(--sage-light); outline-offset: 2px; }
+.nav-toggle span, .nav-toggle span::before, .nav-toggle span::after {
+  content: ""; display: block; width: 22px; height: 2px; background: #fff; position: relative; transition: transform .2s ease, opacity .2s ease;
+}
+.nav-toggle span::before { position: absolute; top: -7px; }
+.nav-toggle span::after { position: absolute; top: 7px; }
+.nav-toggle[aria-expanded="true"] span { background: transparent; }
+.nav-toggle[aria-expanded="true"] span::before { transform: translateY(7px) rotate(45deg); }
+.nav-toggle[aria-expanded="true"] span::after { transform: translateY(-7px) rotate(-45deg); }
+
+/* ---------- Buttons ---------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  font-family: var(--sans); font-weight: 800; font-size: .98rem;
+  padding: .8rem 1.4rem; border-radius: 999px; cursor: pointer;
+  text-decoration: none; border: 2px solid transparent; transition: transform .12s ease, background .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--forest); color: #fff; box-shadow: var(--shadow-sm); }
+.btn--primary:hover { background: var(--forest-deep); color: #fff; }
+.btn--ghost { background: transparent; color: var(--forest-deep); border-color: var(--forest); }
+.btn--ghost:hover { background: var(--forest); color: #fff; }
+.btn--light { background: var(--cream); color: var(--forest-deep); }
+.btn--light:hover { background: #fff; color: var(--forest-deep); }
+.btn--on-dark { border-color: rgba(255,255,255,.6); color: #fff; }
+.btn--on-dark:hover { background: #fff; color: var(--forest-deep); }
+
+/* ---------- Curved branch divider ---------- */
+.branch-divider { display: block; width: 100%; height: auto; color: var(--leaf); }
+.branch-divider svg { width: 100%; height: auto; display:block; }
+
+/* ---------- Hero ---------- */
+.hero {
+  position: relative;
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(168,176,106,.28), transparent 60%),
+    linear-gradient(180deg, var(--paper-2) 0%, var(--paper) 100%);
+  padding: clamp(2.6rem, 6vw, 4.5rem) 0 clamp(2rem, 5vw, 3.5rem);
+  overflow: hidden;
+}
+.hero__grid { display: grid; grid-template-columns: 1.15fr .85fr; gap: clamp(1.5rem, 4vw, 3rem); align-items: center; }
+.hero--center { max-width: 900px; margin-inline: auto; text-align: center; }
+.hero--center .hero__logo { width: min(440px, 72%); margin: 0 auto clamp(.6rem, 2vw, 1.1rem); }
+.hero--center .lede { margin-inline: auto; }
+.hero--center .hero__cta { justify-content: center; }
+.hero--center .hero__addr { justify-content: center; }
+.hero__logo { width: min(340px, 78%); margin: 0 auto; filter: drop-shadow(0 12px 26px rgba(46,42,34,.12)); }
+.hero h1 { margin-bottom: .25em; }
+.hero .tagline { font-family: var(--serif); font-style: italic; font-size: clamp(1.3rem, 2.6vw, 1.7rem); color: var(--sage); margin: 0 0 1rem; }
+.hero__cta { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.6rem 0 1.1rem; }
+.hero__addr { display: inline-flex; align-items: center; gap: .5rem; font-weight: 700; color: var(--brown-soft); font-size: .98rem; }
+
+/* ---------- Cards ---------- */
+.grid { display: grid; gap: clamp(1rem, 2.4vw, 1.6rem); }
+.grid--3 { grid-template-columns: repeat(3, 1fr); }
+.grid--2 { grid-template-columns: repeat(2, 1fr); }
+.card {
+  background: var(--white); border: 1px solid rgba(99,76,44,.12);
+  border-radius: var(--radius); padding: 1.5rem 1.45rem; box-shadow: var(--shadow-sm);
+  transition: transform .15s ease, box-shadow .2s ease;
+}
+.card:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+.card__icon { width: 46px; height: 46px; margin-bottom: .8rem; color: var(--leaf); }
+.card h3 { margin-bottom: .35em; }
+.card p { margin: 0; color: #4a463c; }
+
+/* ---------- Value band (dark green) ---------- */
+.band-dark { background: var(--forest-deep); color: #f3efe4; position: relative; }
+.band-dark h2, .band-dark h3 { color: #fff; }
+.band-dark .eyebrow { color: var(--sage-light); }
+.values { display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(1rem, 2.5vw, 1.8rem); }
+.value__num { font-family: var(--serif); font-size: 2.2rem; color: var(--sage-light); line-height: 1; }
+.value h3 { margin: .5rem 0 .35rem; }
+.value p { color: #dde0cf; margin: 0; font-size: .98rem; }
+
+/* ---------- Our Home / address ---------- */
+.home-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: clamp(1.4rem, 4vw, 2.5rem); align-items: start; }
+.map-frame { border: 0; width: 100%; height: 340px; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.map-facade { position: relative; width: 100%; height: 340px; border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; border: 1px solid rgba(99,76,44,.14);
+  background:
+    linear-gradient(rgba(168,176,106,.16), rgba(168,176,106,.16)),
+    repeating-linear-gradient(0deg, transparent 0 37px, rgba(99,76,44,.08) 37px 38px),
+    repeating-linear-gradient(90deg, transparent 0 37px, rgba(99,76,44,.08) 37px 38px),
+    var(--paper-2); }
+.map-facade__btn { position: absolute; inset: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .35rem; background: transparent; border: 0; cursor: pointer; color: var(--forest-deep); font-family: var(--sans); font-weight: 800; }
+.map-facade__btn svg { width: 44px; height: 44px; color: var(--brown-soft); filter: drop-shadow(0 4px 8px rgba(46,42,34,.12)); }
+.map-facade__btn span { font-size: 1.05rem; }
+.map-facade__btn small { font-weight: 600; color: var(--brown-soft); font-size: .78rem; }
+.map-facade__btn:hover span { text-decoration: underline; }
+.map-facade .map-frame, .map-facade iframe { position: absolute; inset: 0; height: 100%; }
+
+/* ---------- Photos / split / gallery ---------- */
+.photo { width: 100%; height: auto; border-radius: var(--radius); box-shadow: var(--shadow); display: block; object-fit: cover; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(1.5rem, 4vw, 3rem); align-items: center; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: clamp(.8rem, 2vw, 1.2rem); }
+.gallery__img { aspect-ratio: 16 / 10; object-fit: cover; }
+.band-photo { background-size: cover; background-position: center; background-repeat: no-repeat; }
+.addr-card {
+  background: var(--cream); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(99,76,44,.14);
+}
+.addr-card h3 { margin-top: 0; }
+.addr-card address { font-style: normal; line-height: 1.7; font-weight: 600; }
+.addr-card .row { display: flex; gap: .55rem; align-items: baseline; margin: .35rem 0; }
+.addr-card .row svg { width: 18px; flex: 0 0 auto; color: var(--brown-soft); }
+
+/* ---------- Who it's for ---------- */
+.checklist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: .8rem 1.6rem; }
+.checklist li { display: flex; gap: .6rem; align-items: flex-start; }
+.checklist li::before {
+  content: ""; flex: 0 0 auto; margin-top: .35rem; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--leaf);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center/72% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='black' d='M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z'/%3E%3C/svg%3E") center/72% no-repeat;
+}
+
+/* ---------- FAQ accordion ---------- */
+.faq { max-width: 820px; margin-inline: auto; }
+.faq__item { border-bottom: 1px solid rgba(99,76,44,.18); }
+.faq__q {
+  width: 100%; text-align: left; background: none; border: 0; cursor: pointer;
+  font-family: var(--serif); font-size: clamp(1.15rem, 2.3vw, 1.4rem); font-weight: 600; color: var(--forest-deep);
+  padding: 1.15rem 2.5rem 1.15rem 0; position: relative;
+}
+.faq__q:hover { color: var(--sage); }
+.faq__q::after {
+  content: "+"; position: absolute; right: .25rem; top: 50%; transform: translateY(-50%);
+  font-family: var(--sans); font-weight: 700; font-size: 1.6rem; color: var(--sage); transition: transform .2s ease;
+}
+.faq__q[aria-expanded="true"]::after { content: "\2013"; }
+.faq__a { max-height: 0; overflow: hidden; transition: max-height .28s ease; }
+.faq__a > div { padding: 0 0 1.2rem; color: #4a463c; }
+
+/* ---------- Contact / form ---------- */
+.contact-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: clamp(1.4rem, 4vw, 2.5rem); align-items: start; }
+.form { background: var(--white); color: var(--ink); border-radius: var(--radius); padding: clamp(1.3rem, 3vw, 2rem); box-shadow: var(--shadow-sm); border: 1px solid rgba(99,76,44,.12); }
+.form label, .field label { color: var(--ink); }
+.field { margin-bottom: 1rem; }
+.field label { display: block; font-weight: 700; margin-bottom: .35rem; font-size: .95rem; }
+.field input, .field select, .field textarea {
+  width: 100%; font: inherit; padding: .7rem .85rem; border: 1.5px solid rgba(99,76,44,.28);
+  border-radius: 10px; background: var(--paper); color: var(--ink);
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: 3px solid var(--sage-light); outline-offset: 1px; border-color: var(--sage);
+}
+.field textarea { min-height: 120px; resize: vertical; }
+.form__note { font-size: .85rem; color: var(--brown-soft); margin-top: .25rem; }
+
+.contact-list { list-style: none; margin: 0; padding: 0; }
+.contact-list li { display: flex; gap: .7rem; align-items: flex-start; margin-bottom: 1rem; }
+.contact-list svg { width: 22px; flex: 0 0 auto; color: var(--leaf); margin-top: 2px; }
+.contact-list a { font-weight: 700; }
+
+/* ---------- Internal links / silo ---------- */
+.linkrow { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.2rem; }
+.chip { display: inline-flex; align-items: center; gap: .4rem; background: var(--paper-2); border: 1px solid rgba(99,76,44,.16); border-radius: 999px; padding: .5rem 1rem; font-weight: 700; font-size: .92rem; text-decoration: none; color: var(--forest-deep); }
+.chip:hover { background: var(--cream); }
+
+/* ---------- Breadcrumb ---------- */
+.breadcrumb { font-size: .9rem; color: var(--brown-soft); padding-top: 1.1rem; }
+.breadcrumb ol { list-style: none; display: flex; flex-wrap: wrap; gap: .4rem; margin: 0; padding: 0; }
+.breadcrumb li::after { content: "\203A"; margin-left: .4rem; color: rgba(99,76,44,.5); }
+.breadcrumb li:last-child::after { content: ""; }
+.breadcrumb a { text-decoration: none; font-weight: 700; }
+
+/* ---------- Footer ---------- */
+.site-footer { background: var(--forest-deep); color: #d9dcc8; padding: clamp(2.6rem, 6vw, 4rem) 0 1.6rem; }
+.site-footer a { color: #eef0e3; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 2rem; }
+.site-footer h2 { font-family: var(--serif); color: #fff; font-size: 1.25rem; font-weight: 600; margin: 0 0 .7rem; }
+.footer-nav { list-style: none; margin: 0; padding: 0; }
+.footer-nav li { margin-bottom: .45rem; }
+.footer-brand { display:flex; align-items:center; gap:.6rem; margin-bottom: .8rem; }
+.footer-brand img { width: 48px; height:48px; border-radius:50%; background:#fff; padding:3px; }
+.footer-bottom { border-top: 1px solid rgba(255,255,255,.14); margin-top: 2rem; padding-top: 1.2rem; font-size: .85rem; color: #bcc0a8; display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; justify-content: space-between; }
+.footer-bottom a { color:#d9dcc8; }
+
+/* ---------- Focus visibility (a11y) ---------- */
+:focus-visible { outline: 3px solid var(--sage); outline-offset: 2px; border-radius: 4px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 900px) {
+  .split { grid-template-columns: 1fr; }
+  .hero__grid { grid-template-columns: 1fr; text-align: center; }
+  .hero__logo { order: -1; width: min(280px, 70%); }
+  .hero__cta { justify-content: center; }
+  .grid--3 { grid-template-columns: 1fr 1fr; }
+  .values { grid-template-columns: 1fr 1fr; }
+  .home-grid, .contact-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 680px) {
+  .nav { display: none; }
+  .btn-cta-wrap { display: none; }
+  .nav-toggle { display: inline-flex; }
+  .nav.is-open {
+    display: block; position: absolute; left: 0; right: 0; top: var(--header-h);
+    background: var(--paper); border-bottom: 1px solid rgba(99,76,44,.16); box-shadow: var(--shadow);
+  }
+  .nav.is-open .nav__list { flex-direction: column; align-items: stretch; gap: 0; padding: .5rem var(--gap) 1rem; }
+  .nav.is-open .nav__list li { border-top: 1px solid rgba(99,76,44,.1); }
+  .nav.is-open .nav__list a { display: block; padding: .85rem .2rem; }
+  .nav.is-open .btn-cta-wrap { display: block; margin: .8rem 0 0; }
+  .nav.is-open .btn { width: 100%; }
+  .grid--3, .grid--2, .values { grid-template-columns: 1fr; }
+  .checklist { grid-template-columns: 1fr; }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+  .card:hover { transform: none; }
+}</style>
 
 <script type="application/ld+json">
 {
@@ -170,8 +497,8 @@
 <a class="skip-link" href="#main">Skip to main content</a>
 <header class="site-header">
   <div class="container site-header__inner">
-    <a class="brand" href="../" aria-label="Legacy Independent Living — home">
-      <img class="brand__mark" src="../assets/img/logo-mark.png" width="44" height="44" alt="" aria-hidden="true">
+    <a class="brand" href="../">
+      <img class="brand__mark" src="../assets/img/logo-mark.webp" width="44" height="44" alt="" aria-hidden="true">
       <span class="brand__name">Legacy<small>Independent Living</small></span>
     </a>
     <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle menu"><span></span></button>
@@ -239,7 +566,8 @@
   <section class="section">
     <div class="container"><div class="home-grid">
     <div>
-      <p class="eyebrow">Our Home</p>
+      <img class="photo" src="../assets/img/photos/home-exterior-800.webp" srcset="../assets/img/photos/home-exterior-800.webp 800w, ../assets/img/photos/home-exterior-1280.webp 1280w" sizes="(max-width: 900px) 100vw, 560px" width="1280" height="800" alt="The welcoming Legacy Independent Living home in Fulshear, Texas" loading="lazy" decoding="async">
+      <p class="eyebrow" style="margin-top:1.4rem;">Our Home</p>
       <h2>A calm, welcoming place in Fulshear</h2>
       <p class="lede">Our residence sits in a quiet Fulshear neighborhood in Fort Bend County — close to work, recovery meetings, transit, and the everyday rhythms of normal life. It is a real home: comfortable, clean, and built for steady, dignified living.</p>
       <p>We keep the home well cared for and the community respectful, so every resident has the stability they need to focus on what comes next.</p>
@@ -257,7 +585,14 @@
           <div class="row"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg><a href="mailto:service@legacyindependentliving.net">service@legacyindependentliving.net</a></div>
         </address>
       </div>
-      <iframe class="map-frame" style="margin-top:1rem;" src="https://www.google.com/maps?q=Legacy%20Independent%20Living%2C%204334%20Camden%2C%20Fulshear%2C%20TX%2077441&output=embed" title="Map to Legacy Independent Living at 4334 Camden, Fulshear, TX 77441" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+      <div class="map-facade" data-map-src="https://www.google.com/maps?q=Legacy%20Independent%20Living%2C%204334%20Camden%2C%20Fulshear%2C%20TX%2077441&output=embed" data-map-title="Map to Legacy Independent Living at 4334 Camden, Fulshear, TX 77441" style="margin-top:1rem;">
+    <button type="button" class="map-facade__btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6-7-11a7 7 0 0 1 14 0c0 5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+      <span>View interactive map</span>
+      <small>Map by Google &middot; loads on click</small>
+    </button>
+    <noscript><iframe class="map-frame" src="https://www.google.com/maps?q=Legacy%20Independent%20Living%2C%204334%20Camden%2C%20Fulshear%2C%20TX%2077441&output=embed" title="Map to Legacy Independent Living at 4334 Camden, Fulshear, TX 77441" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></noscript>
+  </div>
     </div>
   </div></div>
   </section>
@@ -287,14 +622,14 @@
     <div class="footer-grid">
       <div>
         <div class="footer-brand">
-          <img src="../assets/img/logo-mark.png" width="48" height="48" alt="Legacy Independent Living logo">
+          <img src="../assets/img/logo-mark.webp" width="48" height="48" alt="Legacy Independent Living logo" loading="lazy">
           <span style="font-family:var(--serif);font-size:1.35rem;color:#fff;">Legacy Independent Living</span>
         </div>
         <p style="max-width:36ch;color:#c9ccb6;">Live well. Live independently. Live legacy. Supportive transitional &amp; reentry housing in Fulshear, Fort Bend County.</p>
         <p><a href="https://www.google.com/maps/dir/?api=1&destination=4334%20Camden%2C%20Fulshear%2C%20TX%2077441" target="_blank" rel="noopener">Get directions &rarr;</a></p>
       </div>
       <div>
-        <h4>Explore</h4>
+        <h2>Explore</h2>
         <ul class="footer-nav">
           <li><a href="../">Home</a></li>
           <li><a href="../our-home/">Our Home</a></li>
@@ -304,13 +639,13 @@
         </ul>
       </div>
       <div>
-        <h4>Areas We Serve</h4>
+        <h2>Areas We Serve</h2>
         <ul class="footer-nav">
           <li><a href="../independent-living-fulshear/">Independent Living in Fulshear</a></li>
           <li><a href="../independent-living-katy/">Independent Living in Katy</a></li>
           <li><a href="../independent-living-richmond/">Independent Living in Richmond</a></li>
         </ul>
-        <h4 style="margin-top:1.2rem;">Contact</h4>
+        <h2 style="margin-top:1.2rem;">Contact</h2>
         <address style="font-style:normal;line-height:1.7;color:#d9dcc8;">
           4334 Camden, Fulshear, TX 77441<br>
           <a href="tel:+18323171933">(832) 317-1933</a><br>

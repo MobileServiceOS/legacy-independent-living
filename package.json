@@ -1,0 +1,14 @@
+{
+  "name": "legacy-independent-living",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Marketing site for Legacy Independent Living",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "validate": "node scripts/validate.mjs",
+    "lh": "lighthouse"
+  },
+  "devDependencies": {
+    "lighthouse": "^12.8.2"
+  }
+}

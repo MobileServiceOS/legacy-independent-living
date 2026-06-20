@@ -40,6 +40,22 @@
     });
   });
 
+  /* ---------- Click-to-load map facade ---------- */
+  document.querySelectorAll(".map-facade").forEach(function (facade) {
+    var btn = facade.querySelector(".map-facade__btn");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      var ifr = document.createElement("iframe");
+      ifr.className = "map-frame";
+      ifr.src = facade.getAttribute("data-map-src");
+      ifr.title = facade.getAttribute("data-map-title") || "Map";
+      ifr.loading = "lazy";
+      ifr.referrerPolicy = "no-referrer-when-downgrade";
+      ifr.setAttribute("allowfullscreen", "");
+      facade.replaceWith(ifr);
+    });
+  });
+
   /* ---------- Inquiry form -> mailto (no backend) ---------- */
   var form = document.getElementById("inquiry-form");
   if (form) {

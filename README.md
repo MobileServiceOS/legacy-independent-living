@@ -93,6 +93,45 @@ To replace the logo later, drop a new `source-logo.png` and regenerate `logo.png
 was cut from the banner's circular scene (top-center) — re-crop if the new art
 has a different layout.
 
+## Performance (Lighthouse)
+
+Built to score ~100 across Performance / Accessibility / Best-Practices / SEO.
+Key techniques:
+
+- **Self-hosted fonts** (`assets/fonts/*.woff2`, latin subset) — no third-party
+  Google Fonts request, `font-display: swap`, critical fonts preloaded.
+- **Inlined CSS** — the one stylesheet is injected into each page at build time
+  (no render-blocking request); `@font-face` paths are written per-page so they
+  resolve at every depth.
+- **Click-to-load map facade** — the Google Maps iframe (heavy third-party JS +
+  cookies) is replaced by a lightweight placeholder and only loaded on click.
+  No-JS users still get the map via `<noscript>`.
+- **Optimized imagery** — all photos are self-hosted **WebP**, served responsively
+  (`srcset`/`sizes`) with explicit `width`/`height` (zero layout shift) and
+  `loading="lazy"`; the hero logo is preloaded with `fetchpriority="high"`.
+
+Run it yourself:
+
+```bash
+npm install                 # installs lighthouse (devDependency)
+node scripts/build.mjs
+python3 -m http.server 8080 &     # or any static server
+npx lighthouse http://localhost:8080/ --view
+```
+
+> A local `http.server` doesn't gzip, so Lighthouse will show a "text compression"
+> item locally — GitHub Pages serves gzip/brotli, so that resolves in production.
+> Test the live URL for production-accurate numbers.
+
+## Photography
+
+Photos in `assets/img/photos/` are royalty-free stock from **Unsplash**
+([Unsplash License](https://unsplash.com/license) — free for commercial use, no
+attribution required). They were downloaded as WebP at two widths each and are
+self-hosted. To swap one, drop a replacement at the same path/size (keep the
+aspect ratio so `width`/`height` stay correct) or re-run the download with a new
+Unsplash photo id.
+
 ## SEO notes
 
 - One JSON-LD `@graph` per page: `Organization`, `WebSite`,

@@ -4,11 +4,32 @@
    No serve-time build step: this emits plain static HTML committed to the repo.
    Run:  node scripts/build.mjs
    ========================================================================= */
-import { writeFileSync, mkdirSync } from "node:fs";
+import { writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+// Read the one CSS source of truth so it can be inlined (no render-blocking request).
+const CSS = readFileSync(join(ROOT, "assets/css/styles.css"), "utf8").trim();
+
+// @font-face with page-relative paths (so inlined CSS resolves fonts on every page).
+const FONTS = [
+  ["Cormorant Garamond", "normal", 500, "cormorantgaramond-500"],
+  ["Cormorant Garamond", "normal", 600, "cormorantgaramond-600"],
+  ["Cormorant Garamond", "normal", 700, "cormorantgaramond-700"],
+  ["Cormorant Garamond", "italic", 500, "cormorantgaramond-500-italic"],
+  ["Cormorant Garamond", "italic", 600, "cormorantgaramond-600-italic"],
+  ["Mulish", "normal", 400, "mulish-400"],
+  ["Mulish", "normal", 600, "mulish-600"],
+  ["Mulish", "normal", 700, "mulish-700"],
+  ["Mulish", "normal", 800, "mulish-800"],
+];
+const fontFace = (p) =>
+  FONTS.map(
+    ([fam, style, wt, file]) =>
+      `@font-face{font-family:"${fam}";font-style:${style};font-weight:${wt};font-display:swap;src:url("${p}assets/fonts/${file}.woff2") format("woff2")}`
+  ).join("");
 
 /* ------------------------------------------------------------------ *
  * BUSINESS FACTS  — edit here; everything else derives from this block.
@@ -50,6 +71,20 @@ const esc = (s) =>
 // depth: 0 = repo root page, 1 = page in a sub-directory.
 const pfx = (depth) => (depth === 0 ? "" : "../");
 const homeHref = (depth) => (depth === 0 ? "./" : "../");
+
+/* Responsive, self-hosted WebP photo with width/height (no layout shift),
+   srcset for "properly sized images", lazy by default. */
+function photo(name, alt, depth, opts = {}) {
+  const { wide = false, eager = false, sizes, className = "photo" } = opts;
+  const p = pfx(depth);
+  const ratioW = 16, ratioH = wide ? 7 : 10;
+  const w1 = wide ? 1280 : 800;
+  const w2 = wide ? 1920 : 1280;
+  const iw = w2, ih = Math.round((w2 * ratioH) / ratioW);
+  const s = sizes || "(max-width: 900px) 100vw, 560px";
+  const dir = `${p}assets/img/photos/${name}`;
+  return `<img class="${className}" src="${dir}-${w1}.webp" srcset="${dir}-${w1}.webp ${w1}w, ${dir}-${w2}.webp ${w2}w" sizes="${s}" width="${iw}" height="${ih}" alt="${esc(alt)}" loading="${eager ? "eager" : "lazy"}" decoding="async">`;
+}
 
 /* ------------------------------------------------------------------ *
  * Shared SVG bits
@@ -260,13 +295,11 @@ ${
 <meta name="twitter:image" content="${OG_IMAGE}">
 
 <link rel="icon" type="image/png" sizes="64x64" href="${p}assets/img/favicon.png">
-<link rel="icon" type="image/png" sizes="256x256" href="${p}assets/img/logo-mark.png">
-<link rel="apple-touch-icon" href="${p}assets/img/logo-mark.png">
+<link rel="apple-touch-icon" href="${p}assets/img/favicon.png">
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Mulish:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="${p}assets/css/styles.css">
+<link rel="preload" as="font" type="font/woff2" href="${p}assets/fonts/mulish-400.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="${p}assets/fonts/cormorantgaramond-600.woff2" crossorigin>
+${page.preload || ""}<style>${fontFace(p)}${CSS}</style>
 
 ${jsonLd(page.schema)}
 </head>
@@ -289,8 +322,8 @@ function header(page) {
   ];
   return `<header class="site-header">
   <div class="container site-header__inner">
-    <a class="brand" href="${h}" aria-label="${esc(BIZ.name)} — home">
-      <img class="brand__mark" src="${p}assets/img/logo-mark.png" width="44" height="44" alt="" aria-hidden="true">
+    <a class="brand" href="${h}">
+      <img class="brand__mark" src="${p}assets/img/logo-mark.webp" width="44" height="44" alt="" aria-hidden="true">
       <span class="brand__name">Legacy<small>Independent Living</small></span>
     </a>
     <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Toggle menu"><span></span></button>
@@ -314,14 +347,14 @@ function footer(page) {
     <div class="footer-grid">
       <div>
         <div class="footer-brand">
-          <img src="${p}assets/img/logo-mark.png" width="48" height="48" alt="${esc(BIZ.name)} logo">
+          <img src="${p}assets/img/logo-mark.webp" width="48" height="48" alt="${esc(BIZ.name)} logo" loading="lazy">
           <span style="font-family:var(--serif);font-size:1.35rem;color:#fff;">${esc(BIZ.name)}</span>
         </div>
         <p style="max-width:36ch;color:#c9ccb6;">${esc(BIZ.tagline)} Supportive transitional &amp; reentry housing in ${esc(BIZ.city)}, ${esc(BIZ.county)}.</p>
         <p><a href="${MAPS_DIR}" target="_blank" rel="noopener">Get directions &rarr;</a></p>
       </div>
       <div>
-        <h4>Explore</h4>
+        <h2>Explore</h2>
         <ul class="footer-nav">
           <li><a href="${h}">Home</a></li>
           <li><a href="${p}our-home/">Our Home</a></li>
@@ -331,13 +364,13 @@ function footer(page) {
         </ul>
       </div>
       <div>
-        <h4>Areas We Serve</h4>
+        <h2>Areas We Serve</h2>
         <ul class="footer-nav">
           <li><a href="${p}independent-living-fulshear/">Independent Living in Fulshear</a></li>
           <li><a href="${p}independent-living-katy/">Independent Living in Katy</a></li>
           <li><a href="${p}independent-living-richmond/">Independent Living in Richmond</a></li>
         </ul>
-        <h4 style="margin-top:1.2rem;">Contact</h4>
+        <h2 style="margin-top:1.2rem;">Contact</h2>
         <address style="font-style:normal;line-height:1.7;color:#d9dcc8;">
           ${esc(NAP)}<br>
           <a href="tel:${BIZ.phoneTel}">${esc(BIZ.phoneDisplay)}</a><br>
@@ -357,14 +390,14 @@ function footer(page) {
 }
 
 /* FAQ accordion markup (shared by home + /faq/) */
-function faqAccordion(faqs) {
+function faqAccordion(faqs, hl = 3) {
   return `<div class="faq">
     ${faqs
       .map(
         (f, i) => `<div class="faq__item">
-      <h3 style="margin:0;">
+      <h${hl} style="margin:0;">
         <button class="faq__q" id="faq-q-${i}" aria-expanded="false" aria-controls="faq-a-${i}">${esc(f.q)}</button>
-      </h3>
+      </h${hl}>
       <div class="faq__a" id="faq-a-${i}" role="region" aria-labelledby="faq-q-${i}">
         <div><p>${esc(f.a)}</p></div>
       </div>
@@ -374,12 +407,28 @@ function faqAccordion(faqs) {
   </div>`;
 }
 
+/* Click-to-load map facade — keeps Google Maps (third-party JS + cookies) out of
+   the initial load for speed + privacy; the real iframe is injected on click.
+   No-JS users still get the map via <noscript>. */
+function mapFacade(extraStyle = "") {
+  const title = `Map to ${BIZ.name} at ${NAP}`;
+  return `<div class="map-facade" data-map-src="${MAPS_EMBED}" data-map-title="${esc(title)}"${extraStyle ? ` style="${extraStyle}"` : ""}>
+    <button type="button" class="map-facade__btn">
+      ${ICONS.pin}
+      <span>View interactive map</span>
+      <small>Map by Google &middot; loads on click</small>
+    </button>
+    <noscript><iframe class="map-frame" src="${MAPS_EMBED}" title="${esc(title)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></noscript>
+  </div>`;
+}
+
 /* Reusable "Our Home" map + address block */
 function ourHomeBlock(depth) {
   const p = pfx(depth);
   return `<div class="home-grid">
     <div>
-      <p class="eyebrow">Our Home</p>
+      ${photo("home-exterior", `The welcoming ${BIZ.name} home in ${BIZ.city}, Texas`, depth, { className: "photo", sizes: "(max-width: 900px) 100vw, 560px" })}
+      <p class="eyebrow" style="margin-top:1.4rem;">Our Home</p>
       <h2>A calm, welcoming place in ${esc(BIZ.city)}</h2>
       <p class="lede">Our residence sits in a quiet ${esc(BIZ.city)} neighborhood in ${esc(BIZ.county)} — close to work, recovery meetings, transit, and the everyday rhythms of normal life. It is a real home: comfortable, clean, and built for steady, dignified living.</p>
       <p>We keep the home well cared for and the community respectful, so every resident has the stability they need to focus on what comes next.</p>
@@ -397,7 +446,7 @@ function ourHomeBlock(depth) {
           <div class="row">${ICONS.mail}<a href="mailto:${BIZ.email}">${esc(BIZ.email)}</a></div>
         </address>
       </div>
-      <iframe class="map-frame" style="margin-top:1rem;" src="${MAPS_EMBED}" title="Map to ${esc(BIZ.name)} at ${esc(NAP)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+      ${mapFacade("margin-top:1rem;")}
     </div>
   </div>`;
 }
@@ -475,6 +524,7 @@ pages.push({
   depth: 0,
   path: "/",
   ogType: "business.business",
+  preload: `<link rel="preload" as="image" href="assets/img/logo-560.webp" imagesrcset="assets/img/logo-560.webp 560w, assets/img/logo.webp 900w" imagesizes="(max-width: 900px) 72vw, 440px" fetchpriority="high">\n`,
   title: "Legacy Independent Living | Transitional & Reentry Housing in Fulshear, TX",
   description:
     "Structured, supportive transitional & reentry housing in Fulshear, TX (Fort Bend County). A stable, sober home for adults rebuilding their lives. Serving Fulshear, Katy & Richmond. Call (832) 317-1933.",
@@ -483,7 +533,7 @@ pages.push({
   <section class="hero">
     <div class="container">
       <div class="hero--center">
-        <img class="hero__logo" src="assets/img/logo.png" width="1100" height="1100" alt="Legacy Independent Living — a family walking home beneath a tree. Live well. Live independently. Live legacy.">
+        <img class="hero__logo" src="assets/img/logo.webp" srcset="assets/img/logo-560.webp 560w, assets/img/logo.webp 900w" sizes="(max-width: 900px) 72vw, 440px" width="900" height="900" fetchpriority="high" decoding="async" alt="Legacy Independent Living — a family walking home beneath a tree. Live well. Live independently. Live legacy.">
         <p class="visually-hidden">${esc(BIZ.tagline)}</p>
         <h1>Supportive Transitional Housing in ${esc(BIZ.city)}, Texas</h1>
         <p class="lede">Legacy Independent Living is a stable, sober, and dignified home for adults rebuilding their lives — in reentry, after treatment, or simply ready for a fresh start. You bring the determination; we provide the structure, support, and community to help it last.</p>
@@ -498,10 +548,16 @@ pages.push({
   ${branchDivider}
 
   <section class="section" id="welcome">
-    <div class="container center">
-      <p class="eyebrow">Welcome</p>
-      <h2>A fresh start, with a foundation under it</h2>
-      <p class="lede measure">Leaving incarceration, finishing treatment, or starting over is hard enough without wondering where you'll live. Legacy Independent Living gives you a safe, accountable place to land in ${esc(BIZ.city)} — so you can focus on work, recovery, and family instead of survival. This is more than a place to stay. It's where you rebuild a legacy you're proud of.</p>
+    <div class="container">
+      <div class="split">
+        <div>
+          <p class="eyebrow">Welcome</p>
+          <h2>A fresh start, with a foundation under it</h2>
+          <p class="lede">Leaving incarceration, finishing treatment, or starting over is hard enough without wondering where you'll live.</p>
+          <p>Legacy Independent Living gives you a safe, accountable place to land in ${esc(BIZ.city)} — so you can focus on work, recovery, and family instead of survival. This is more than a place to stay. It's where you rebuild a legacy you're proud of.</p>
+        </div>
+        <div>${photo("cozy-interior", "A calm, sunlit living space with a comfortable chair by the window", 0, { sizes: "(max-width: 900px) 100vw, 520px" })}</div>
+      </div>
     </div>
   </section>
 
@@ -514,7 +570,7 @@ pages.push({
     </div>
   </section>
 
-  <section class="section band-dark" id="why-legacy">
+  <section class="section band-dark band-photo" id="why-legacy" style="background-image: linear-gradient(rgba(58,67,31,.88), rgba(58,67,31,.92)), url('assets/img/photos/growth-seedlings-1280.webp');">
     <div class="container">
       <div class="center"><p class="eyebrow">Why Legacy</p><h2>Values that guide our home</h2></div>
       <div class="values" style="margin-top:2.2rem;">
@@ -532,9 +588,12 @@ pages.push({
       <div class="center"><p class="eyebrow">Who It's For</p><h2>Is Legacy right for you?</h2>
         <p class="lede measure">Our home is for adults who are ready to live with accountability and move forward. You may be a good fit if you are:</p>
       </div>
-      <ul class="checklist" style="margin-top:1.6rem;max-width:880px;margin-inline:auto;">
-        ${whoFor.map((w) => `<li>${w}</li>`).join("\n        ")}
-      </ul>
+      <div class="split" style="margin-top:2rem;align-items:start;">
+        <div>${photo("support-hands", "A reassuring hand on a shoulder — the encouragement and accountability of a supportive community", 0, { sizes: "(max-width: 900px) 100vw, 480px" })}</div>
+        <ul class="checklist" style="grid-template-columns:1fr;">
+          ${whoFor.map((w) => `<li>${w}</li>`).join("\n          ")}
+        </ul>
+      </div>
     </div>
   </section>
 
@@ -705,8 +764,20 @@ pages.push({
   ${branchDivider}
   <section class="section">
     <div class="container">
-      <div class="grid grid--3">
+      <div class="center"><p class="eyebrow">Daily Life</p><h2>What life at Legacy looks like</h2></div>
+      <div class="grid grid--3" style="margin-top:2rem;">
         ${featureCards.map((c) => `<article class="card">${c.i}<h3>${c.t}</h3><p>${c.d}</p></article>`).join("\n        ")}
+      </div>
+    </div>
+  </section>
+  <section class="section section--tight">
+    <div class="container">
+      <div class="center"><p class="eyebrow">A Look Inside</p><h2>Comfortable, clean, and cared for</h2></div>
+      <div class="gallery" style="margin-top:2rem;">
+        ${photo("living-room", "A bright, comfortable shared living room with natural light", 1, { className: "photo gallery__img", sizes: "(max-width: 700px) 100vw, 33vw" })}
+        ${photo("kitchen", "A clean, well-equipped kitchen for shared meals", 1, { className: "photo gallery__img", sizes: "(max-width: 700px) 100vw, 33vw" })}
+        ${photo("bedroom", "A simple, restful bedroom", 1, { className: "photo gallery__img", sizes: "(max-width: 700px) 100vw, 33vw" })}
+        ${photo("cozy-interior", "A calm corner with a chair and warm natural light", 1, { className: "photo gallery__img", sizes: "(max-width: 700px) 100vw, 33vw" })}
       </div>
     </div>
   </section>
@@ -755,8 +826,9 @@ pages.push({
   ${branchDivider}
   <section class="section">
     <div class="container">
-      <div class="grid grid--2">
-        ${steps.map((s, i) => `<article class="card"><div class="value__num" style="color:var(--leaf);">Step 0${i + 1}</div><h3>${s.t}</h3><p>${s.d}</p></article>`).join("\n        ")}
+      <div class="center"><p class="eyebrow">The Process</p><h2>Four simple steps</h2></div>
+      <div class="grid grid--2" style="margin-top:2rem;">
+        ${steps.map((s, i) => `<article class="card"><div class="value__num" style="color:#5f6234;">Step 0${i + 1}</div><h3>${s.t}</h3><p>${s.d}</p></article>`).join("\n        ")}
       </div>
       <div class="center" style="margin-top:2.2rem;">
         <a class="btn btn--primary" href="../contact/#inquire">Start your inquiry</a>
@@ -797,7 +869,7 @@ pages.push({
   </section>
   ${branchDivider}
   <section class="section">
-    <div class="container">${faqAccordion(FAQS)}</div>
+    <div class="container">${faqAccordion(FAQS, 2)}</div>
   </section>
   <section class="section band-dark">
     <div class="container center">
@@ -845,7 +917,7 @@ pages.push({
             <li>${ICONS.mail}<a href="mailto:${BIZ.email}">${esc(BIZ.email)}</a></li>
           </ul>
           <p><a class="chip" href="${MAPS_DIR}" target="_blank" rel="noopener">${ICONS.pin} Get directions</a></p>
-          <iframe class="map-frame" style="margin-top:1rem;" src="${MAPS_EMBED}" title="Map to ${esc(BIZ.name)} at ${esc(NAP)}" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+          ${mapFacade("margin-top:1rem;")}
         </div>
         <div id="inquire">
           <h2>Send an inquiry</h2>
