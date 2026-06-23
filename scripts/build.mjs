@@ -37,6 +37,7 @@ const fontFace = (p) =>
  * ------------------------------------------------------------------ */
 const BIZ = {
   name: "Legacy Independent Living",
+  legalName: "Legacy Independent Living LLC", // used in footer + schema legal spots
   tagline: "Live well. Live independently. Live legacy.",
   domain: "https://legacyindependentliving.net", // <-- swap if final domain differs
   phoneDisplay: "(832) 317-1933",
@@ -133,6 +134,7 @@ const localBusinessNode = {
   "@type": ["LocalBusiness", "LodgingBusiness"],
   "@id": ID.biz,
   name: BIZ.name,
+  legalName: BIZ.legalName,
   alternateName: "Legacy Independent Living Houston",
   url: BIZ.domain + "/",
   image: OG_IMAGE,
@@ -161,6 +163,7 @@ const orgNode = {
   "@type": "Organization",
   "@id": ID.org,
   name: BIZ.name,
+  legalName: BIZ.legalName,
   url: BIZ.domain + "/",
   logo: `${BIZ.domain}/assets/img/logo.png`,
   image: OG_IMAGE,
@@ -377,7 +380,7 @@ function footer(page) {
       </div>
     </div>
     <div class="footer-bottom">
-      <span>&copy; ${year} ${esc(BIZ.name)}. All rights reserved.</span>
+      <span>&copy; ${year} ${esc(BIZ.legalName)}. All rights reserved.</span>
       <span>${esc(NAP_FULL)}</span>
     </div>
   </div>
@@ -500,10 +503,10 @@ const featureCards = [
 ];
 
 const values = [
-  { t: "Dignity", d: "Everyone deserves a safe, private place to call home. We treat every resident with respect, no questions asked." },
-  { t: "Independence", d: "You run your own life. We provide the home; the rest is yours: your schedule, your choices, your space." },
-  { t: "Stability", d: "A steady, affordable address is the foundation for everything else: work, health, and peace of mind." },
-  { t: "Community", d: "Live among neighbors who value a calm, respectful home. Independence doesn't have to mean isolation." },
+  { t: "Safety &amp; Security", d: "A clean, secure place to live where you can settle in and feel at home." },
+  { t: "Respect &amp; Dignity", d: "Everyone is treated with respect. You live here as the independent adult you are." },
+  { t: "Independence", d: "Your schedule, your space, your choices. We provide the home; the life is yours." },
+  { t: "Personal Growth", d: "A stable foundation frees you to focus on work, family, and the goals that matter to you." },
 ];
 
 const whoFor = [
@@ -551,8 +554,9 @@ pages.push({
         <div>
           <p class="eyebrow">Welcome</p>
           <h2>A home of your own, on your own terms</h2>
-          <p class="lede">Whether you've served your country or you're climbing out of homelessness, everyone deserves a stable, dignified place to live.</p>
-          <p>Legacy Independent Living gives you exactly that in ${esc(BIZ.city)}: an affordable room in a real home where you live independently. No programs to enroll in, no curfews, no one looking over your shoulder. Just a steady address you can build a life from.</p>
+          <p class="lede">At Legacy Independent Living, we provide safe, stable, and affordable housing for adults seeking independence and a better quality of life. Everyone deserves a place to call home.</p>
+          <p>Our homes are comfortable, respectful, and community minded, built for independent living. Each is a clean, welcoming place where you have the privacy and stability to live on your own terms, with no programs, no curfews, and no on-site staff.</p>
+          <p>We are not just providing housing. We are helping people build a legacy of independence, stability, and success.</p>
         </div>
         <div>${photo("cozy-interior", "A calm, sunlit living space with a comfortable chair by the window", 0, { sizes: "(max-width: 900px) 100vw, 520px" })}</div>
       </div>
