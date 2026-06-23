@@ -6,7 +6,7 @@ import { join, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
-const NAP = "4334 Camden, Fulshear, TX 77441";
+const NAP = "Houston, TX";
 const DOMAIN = "https://legacyindependentliving.net";
 
 let errors = 0;

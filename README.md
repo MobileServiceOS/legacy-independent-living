@@ -1,7 +1,10 @@
 # Legacy Independent Living — website
 
-Marketing website for **Legacy Independent Living**, a supportive transitional &
-reentry housing residence in **Fulshear, TX** (Fort Bend County).
+Marketing website for **Legacy Independent Living** — affordable **independent
+living homes across the Houston, TX metro** for **veterans and people experiencing
+homelessness**. Residents rent a room and live on their own; there are no on-site
+staff, programs, or curfews. Run as a **service-area business** (no public street
+address shown).
 
 > _Live well. Live independently. Live legacy._
 
@@ -16,9 +19,9 @@ the committed `.html` files are what ship.
 
 ```
 /                              index.html            Home / hub (single-page anchor nav)
-/independent-living-fulshear/  index.html            Primary "money" geo page
-/independent-living-katy/      index.html            Geo landing page (Katy)
-/independent-living-richmond/  index.html            Geo landing page (Richmond)
+/independent-living-houston/          index.html     Primary "money" page (Houston)
+/veterans-housing-houston/            index.html     Audience page (veterans)
+/housing-for-the-homeless-houston/    index.html     Audience page (homelessness)
 /our-home/                     index.html            The residence
 /how-to-apply/                 index.html            Application steps
 /faq/                          index.html            Full FAQ (+ FAQPage schema)
@@ -70,7 +73,8 @@ Then commit the regenerated `.html` files.
 |------|-------|---------------|
 | **Email** | `BIZ.email` in `scripts/build.mjs` | `service@legacyindependentliving.net` |
 | **Domain** | `BIZ.domain` in `scripts/build.mjs` | `https://legacyindependentliving.net` |
-| **Geo pin** | `BIZ.geoLat` / `BIZ.geoLng` | `29.7016, -95.8949` — **verify against the real Google Business Profile pin** for accurate map ranking |
+| **Geo pin** | `BIZ.geoLat` / `BIZ.geoLng` | `29.7604, -95.3698` (central Houston reference) — adjust toward where most homes are concentrated |
+| **Areas served** | `BIZ.areasServed` | Houston, Katy, Sugar Land, Pasadena, Pearland, Spring |
 | **Phone** | `BIZ.phoneDisplay` / `BIZ.phoneTel` | `(832) 317-1933` / `+18323171933` |
 
 After changing any of these, re-run `build.mjs` + `validate.mjs`.
@@ -137,11 +141,11 @@ Unsplash photo id.
 - One JSON-LD `@graph` per page: `Organization`, `WebSite`,
   `LocalBusiness`+`LodgingBusiness` (full NAP, geo, `areaServed`, hours, `hasMap`,
   `priceRange`), plus `FAQPage` (home + /faq/) and `BreadcrumbList` (sub-pages).
-- NAP string `4334 Camden, Fulshear, TX 77441` is byte-identical across schema,
+- Service-area business: no public street address. Locality `Houston, TX` is byte-identical across schema,
   contact section, and footer (enforced by `validate.mjs`).
 - Geo meta tags, canonical, Open Graph (`business.business` on home/contact),
   Twitter `summary_large_image`, `robots: index, follow, max-image-preview:large`.
-- Topical/geo silo: home hub ↔ Fulshear/Katy/Richmond geo pages ↔ supporting pages,
+- Topical silo: home hub ↔ Houston / veterans / homelessness pages ↔ supporting pages,
   interlinked with descriptive anchors (no orphan pages).
 
 ## Deploy (GitHub Pages)
