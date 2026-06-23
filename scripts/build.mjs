@@ -143,7 +143,7 @@ const localBusinessNode = {
   email: BIZ.email,
   priceRange: BIZ.priceRange,
   description:
-    "Independent living homes across the Houston, Texas area for veterans and people experiencing homelessness. Affordable, stable, private housing with no programs, curfews, or on-site staff. Just a place of your own.",
+    "Independent living homes across the Houston, Texas area for veterans and people experiencing homelessness. Affordable, stable, private housing where residents rent a room and live independently. A real place of your own.",
   address: postalAddress,
   geo: { "@type": "GeoCoordinates", latitude: BIZ.geoLat, longitude: BIZ.geoLng },
   hasMap: `https://www.google.com/maps?q=${MAPS_QUERY}`,
@@ -213,11 +213,11 @@ function jsonLd(nodes) {
 const FAQS = [
   {
     q: "What is Legacy Independent Living?",
-    a: `Legacy Independent Living offers independent living homes across the ${BIZ.city}, Texas area for veterans and people experiencing homelessness. You rent a room in a clean, comfortable house and live on your own. It is a real home of your own, not a program.`,
+    a: `Legacy Independent Living offers independent living homes across the ${BIZ.city}, Texas area for veterans and people experiencing homelessness. You rent a room in a clean, comfortable house and live on your own. It is a real home of your own.`,
   },
   {
-    q: "Is this supportive or transitional housing with staff on site?",
-    a: "No. This is independent living. There are no on-site staff, case managers, curfews, classes, or required programs. You come and go as you please and run your own life. We simply provide a stable, affordable place to live.",
+    q: "How does independent living work here?",
+    a: "You rent a room in a comfortable home and live independently, on your own schedule. You come and go as you please and run your own day-to-day life, just like in any other home. It is a private, stable place that is yours.",
   },
   {
     q: "Where are the homes located?",
@@ -233,7 +233,7 @@ const FAQS = [
   },
   {
     q: "Do you help veterans with VA benefits or services?",
-    a: "We're an independent housing provider, not a VA or social-service program, so we don't administer benefits. That said, veterans are very welcome here, and we're glad to point you toward Houston-area VA offices and community resources you can contact directly.",
+    a: "Veterans are very welcome here. We provide the housing, and we're glad to point you toward Houston-area VA offices and community resources you can reach out to directly.",
   },
   {
     q: "What areas do you serve?",
@@ -432,7 +432,7 @@ function ourHomeBlock(depth) {
       <p class="eyebrow" style="margin-top:1.4rem;">Our Homes</p>
       <h2>Real homes across ${esc(BIZ.city)}</h2>
       <p class="lede">Our homes sit in everyday ${esc(BIZ.city)}-area neighborhoods, close to transit, work, and VA services. Each is a clean, comfortable house where you rent a room and live independently.</p>
-      <p>No programs, no curfews, no staff looking over your shoulder. Just a stable, affordable address that's yours, with respectful neighbors who value a calm place to live.</p>
+      <p>It is a stable, affordable address that's yours, in a calm home with respectful neighbors. You live independently, on your own schedule.</p>
       <div class="linkrow">
         <a class="chip" href="${p}our-home/">See our homes</a>
         <a class="chip" href="${p}contact/#inquire">${ICONS.pin} Check availability</a>
@@ -496,7 +496,7 @@ const pages = [];
 const featureCards = [
   { i: ICONS.key, t: "A Place of Your Own", d: "Rent your own room in a clean, comfortable house. Come and go on your schedule, keep your own space, and live like the adult you are." },
   { i: ICONS.home, t: "Stable &amp; Affordable", d: "Honest, predictable rent with no surprise fees, so you can plan ahead and put down roots instead of worrying about next month." },
-  { i: ICONS.shield, t: "No Programs, No Curfews", d: "This is independent living, not a shelter or a program. No required classes, no sign-in sheets, no staff watching over you." },
+  { i: ICONS.shield, t: "Freedom &amp; Privacy", d: "Come and go on your own schedule and keep your own space. You live here independently, the way you want to." },
   { i: ICONS.people, t: "Respectful Neighbors", d: "Share the home with others who value a calm, quiet, respectful place to live. Your independence, alongside good company." },
   { i: ICONS.path, t: "Close to What Matters", d: "Homes across the Houston metro keep you near transit, jobs, VA services, and the everyday rhythms of the city." },
   { i: ICONS.leaf, t: "A Fresh Foundation", d: "A steady address to rebuild from, at your own pace, whether you're a veteran or starting over after homelessness." },
@@ -528,7 +528,7 @@ pages.push({
   preload: `<link rel="preload" as="image" href="assets/img/logo-560.webp" imagesrcset="assets/img/logo-560.webp 560w, assets/img/logo.webp 900w" imagesizes="(max-width: 900px) 72vw, 440px" fetchpriority="high">\n`,
   title: "Legacy Independent Living | Independent Housing in Houston for Veterans & Those Rebuilding",
   description:
-    "Affordable independent living homes across Houston, TX for veterans and people experiencing homelessness. Rent a room and live on your own, with no programs, curfews, or on-site staff. Call (832) 317-1933.",
+    "Affordable independent living homes across Houston, TX for veterans and people experiencing homelessness. Rent a room and live on your own in a stable, private home that's yours. Call (832) 317-1933.",
   schema: [orgNode, websiteNode, localBusinessNode, faqPageNode(FAQS)],
   body: `
   <section class="hero">
@@ -537,7 +537,7 @@ pages.push({
         <img class="hero__logo" src="assets/img/logo.webp" srcset="assets/img/logo-560.webp 560w, assets/img/logo.webp 900w" sizes="(max-width: 900px) 72vw, 440px" width="900" height="900" fetchpriority="high" decoding="async" alt="Legacy Independent Living logo: a family walking home beneath a tree. Live well. Live independently. Live legacy.">
         <p class="visually-hidden">${esc(BIZ.tagline)}</p>
         <h1>Independent Living Homes in ${esc(BIZ.city)}, Texas</h1>
-        <p class="lede">Affordable, independent housing for veterans and people experiencing homelessness across the ${esc(BIZ.city)} area. Rent a room in a real home and live on your own terms. No programs, no curfews, no staff. Just a stable place that's yours.</p>
+        <p class="lede">Affordable, independent housing for veterans and people experiencing homelessness across the ${esc(BIZ.city)} area. Rent a room in a real home and live on your own terms. A stable, private place to call your own, close to work, transit, and VA services.</p>
         <div class="hero__cta">
           <a class="btn btn--primary" href="#contact">Check availability</a>
           <a class="btn btn--ghost" href="tel:${BIZ.phoneTel}">Call ${esc(BIZ.phoneDisplay)}</a>
@@ -552,10 +552,10 @@ pages.push({
     <div class="container">
       <div class="split">
         <div>
-          <p class="eyebrow">Welcome</p>
+          <p class="eyebrow">Our Mission</p>
           <h2>A home of your own, on your own terms</h2>
-          <p class="lede">At Legacy Independent Living, we provide safe, stable, and affordable housing for adults seeking independence and a better quality of life. Everyone deserves a place to call home.</p>
-          <p>Our homes are comfortable, respectful, and community minded, built for independent living. Each is a clean, welcoming place where you have the privacy and stability to live on your own terms, with no programs, no curfews, and no on-site staff.</p>
+          <p class="lede">Our mission is to provide safe, stable, and affordable housing for adults seeking independence, personal growth, and a better quality of life. Everyone deserves a place to call home, where they can thrive, build confidence, and work toward their personal goals.</p>
+          <p>Our homes offer a comfortable, respectful environment built for independent living, while encouraging responsibility, self-sufficiency, and personal success. Each is a clean, secure place where you have the privacy to live on your own terms, in a calm home with respectful neighbors.</p>
           <p>We are not just providing housing. We are helping people build a legacy of independence, stability, and success.</p>
         </div>
         <div>${photo("cozy-interior", "A calm, sunlit living space with a comfortable chair by the window", 0, { sizes: "(max-width: 900px) 100vw, 520px" })}</div>
@@ -636,9 +636,9 @@ const geoPages = [
     h1: "Independent Living in Houston, TX",
     title: "Independent Living in Houston, TX | Affordable Rooms to Rent | Legacy",
     description:
-      "Affordable independent living homes across Houston, TX. Rent a room and live on your own, with no programs, curfews, or staff. For veterans and people rebuilding. Call (832) 317-1933.",
+      "Affordable independent living homes across Houston, TX. Rent a room and live on your own in a stable, private home that's yours. For veterans and people rebuilding. Call (832) 317-1933.",
     intro:
-      "Legacy Independent Living offers affordable, independent housing across the Houston, Texas area. Rent a room in a clean, comfortable home and live entirely on your own terms. This is independent living, not a shelter or a program. It's open to veterans, to people coming out of homelessness, and to anyone who needs a stable, dignified place of their own.",
+      "Legacy Independent Living offers affordable, independent housing across the Houston, Texas area. Rent a room in a clean, comfortable home and live entirely on your own terms. This is independent living: a private, stable home that's yours. It's open to veterans, to people coming out of homelessness, and to anyone who needs a stable, dignified place of their own.",
     localH2: "Homes across the Houston metro",
     local:
       "Our homes sit in everyday neighborhoods around Houston and the surrounding metro, including Katy, Sugar Land, Pasadena, Pearland, and Spring. That keeps you close to jobs, transit, VA services, and the rhythms of the city, in a quiet house with respectful neighbors.",
@@ -652,12 +652,12 @@ const geoPages = [
     h1: "Housing for Veterans in Houston, TX",
     title: "Housing for Veterans in Houston, TX | Independent Living | Legacy",
     description:
-      "Affordable independent housing for veterans across Houston, TX. Rent a room and live on your own, with no programs or curfews. Near Houston-area VA services. Call (832) 317-1933.",
+      "Affordable independent housing for veterans across Houston, TX. Rent a room and live on your own in a stable home of your own near Houston-area VA services. Call (832) 317-1933.",
     intro:
-      "You served your country, and you deserve a stable place of your own to come home to. Legacy Independent Living offers veterans affordable rooms in real homes across the Houston area, where you live independently on your own schedule. No programs to join, no curfews, no one looking over your shoulder.",
+      "You served your country, and you deserve a stable place of your own to come home to. Legacy Independent Living offers veterans affordable rooms in real homes across the Houston area, where you live independently on your own schedule, in a private place that's yours.",
     localH2: "Close to Houston-area VA services",
     local:
-      "Our homes around Houston keep you within reach of VA medical facilities, transit, and work. We're an independent housing provider rather than a VA program, so we don't administer benefits, but veterans are always welcome, and we're glad to point you toward local VA and community resources you can contact directly.",
+      "Our homes around Houston keep you within reach of VA medical facilities, transit, and work. Veterans are always welcome here. We provide the housing, and we're glad to point you toward local VA offices and community resources you can reach out to directly.",
     offerEyebrow: "What You Get",
     offerH2: "A stable home, on your terms",
   },
@@ -670,7 +670,7 @@ const geoPages = [
     description:
       "Affordable independent housing in Houston, TX for people experiencing or leaving homelessness. Rent a room and live independently, with a stable address to rebuild from. Call (832) 317-1933.",
     intro:
-      "Getting off the street or out of a shelter starts with a stable address. Legacy Independent Living offers affordable rooms in real homes across Houston where you can live independently and rebuild at your own pace, with dignity, privacy, and no programs or curfews to navigate.",
+      "Getting off the street or out of a shelter starts with a stable address. Legacy Independent Living offers affordable rooms in real homes across Houston where you can live independently and rebuild at your own pace, with dignity and privacy, in a place that's truly your own.",
     localH2: "A steady address to rebuild from",
     local:
       "Our Houston-area homes are clean, calm, and close to transit and work, so you can focus on getting back on your feet. Rent is honest and affordable, and the home is yours to live in like anyone else's, because everyone deserves a real place to call home.",
@@ -720,7 +720,7 @@ for (const g of geoPages) {
     <div class="container">
       <h2>${esc(g.localH2)}</h2>
       <p class="measure">${g.local}</p>
-      <p class="measure">Every Legacy home is a place of your own where you live independently, with no programs, no curfews, and no on-site staff. Just an affordable, stable address with respectful neighbors. ${esc(BIZ.tagline)}</p>
+      <p class="measure">Every Legacy home is a place of your own where you live independently, on your own schedule. An affordable, stable address in a calm home with respectful neighbors. ${esc(BIZ.tagline)}</p>
     </div>
   </section>
   <section class="section" style="background:var(--paper-2);">
@@ -775,7 +775,7 @@ pages.push({
     <div class="container">
       <p class="eyebrow">Our Homes</p>
       <h1>Real homes you can live in</h1>
-      <p class="lede">Legacy Independent Living offers clean, comfortable houses across the ${esc(BIZ.city)} area where you rent a room and live independently, with no programs and no curfews, just a stable place of your own.</p>
+      <p class="lede">Legacy Independent Living offers clean, comfortable houses across the ${esc(BIZ.city)} area where you rent a room and live independently in a stable, private place of your own.</p>
     </div>
   </section>
   ${branchDivider}
