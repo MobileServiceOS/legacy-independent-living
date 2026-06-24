@@ -494,9 +494,9 @@ const pages = [];
 
 /* ---------- HOME ---------- */
 const featureCards = [
-  { i: ICONS.key, t: "A Place of Your Own", d: "Rent your own room in a clean, comfortable house. Come and go on your schedule, keep your own space, and live like the adult you are." },
+  { i: ICONS.key, t: "A Place of Your Own", d: "Rent your own room in a clean, comfortable house. Come and go on your schedule and live like the adult you are." },
   { i: ICONS.home, t: "Stable &amp; Affordable", d: "Honest, predictable rent with no surprise fees, so you can plan ahead and put down roots instead of worrying about next month." },
-  { i: ICONS.shield, t: "Freedom &amp; Privacy", d: "Come and go on your own schedule and keep your own space. You live here independently, the way you want to." },
+  { i: ICONS.shield, t: "Freedom &amp; Privacy", d: "Come and go on your own schedule. You live here independently, the way you want to." },
   { i: ICONS.people, t: "Respectful Neighbors", d: "Share the home with others who value a calm, quiet, respectful place to live. Your independence, alongside good company." },
   { i: ICONS.path, t: "Close to What Matters", d: "Homes across the Houston metro keep you near transit, jobs, VA services, and the everyday rhythms of the city." },
   { i: ICONS.leaf, t: "A Fresh Foundation", d: "A steady address to rebuild from, at your own pace, whether you're a veteran or starting over after homelessness." },
