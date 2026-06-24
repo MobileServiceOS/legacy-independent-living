@@ -960,7 +960,25 @@ for (const page of pages) {
 /* ------------------------------------------------------------------ *
  * robots.txt + sitemap.xml + .nojekyll
  * ------------------------------------------------------------------ */
-const robots = `User-agent: *
+// Explicitly welcome every major search engine + AI/LLM crawler (the wildcard
+// already allows all; these named groups make the intent unambiguous).
+const crawlers = [
+  // Search engines
+  "Googlebot", "Googlebot-Image", "Googlebot-News", "Bingbot", "Slurp", "DuckDuckBot",
+  "YandexBot", "Baiduspider", "Applebot", "Sogou", "PetalBot",
+  // AI / LLM training + AI search crawlers
+  "GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-Web", "Claude-User",
+  "Claude-SearchBot", "anthropic-ai", "Google-Extended", "PerplexityBot", "Perplexity-User",
+  "Applebot-Extended", "Amazonbot", "Bytespider", "Meta-ExternalAgent", "Meta-ExternalFetcher",
+  "FacebookBot", "CCBot", "cohere-ai", "Diffbot", "DuckAssistBot", "YouBot", "Timpibot",
+  "ImagesiftBot", "omgili", "Webzio-Extended",
+];
+const robots = `# Legacy Independent Living - open to all search engines and AI crawlers.
+# Everything is allowed for indexing, AI search, and training. Nothing is disallowed.
+
+${crawlers.map((ua) => `User-agent: ${ua}\nAllow: /`).join("\n\n")}
+
+User-agent: *
 Allow: /
 
 Sitemap: ${BIZ.domain}/sitemap.xml
@@ -968,7 +986,20 @@ Sitemap: ${BIZ.domain}/sitemap.xml
 writeFileSync(join(ROOT, "robots.txt"), robots);
 console.log("wrote robots.txt");
 
-const lastmod = "2026-06-19";
+// llms.txt - a clean site map for AI search tools (llmstxt.org convention).
+const llms = `# ${BIZ.name}
+
+> ${BIZ.legalName}. Independent living homes across the ${BIZ.city}, ${BIZ.region} area for veterans and people experiencing homelessness. Residents rent a room in a real home and live independently. ${BIZ.tagline}
+
+Contact: ${BIZ.phoneDisplay} | ${BIZ.email} | Serving the greater ${BIZ.city} area, ${BIZ.region}
+
+## Pages
+${pages.map((p) => `- [${p.title}](${BIZ.domain}${p.path}): ${p.description}`).join("\n")}
+`;
+writeFileSync(join(ROOT, "llms.txt"), llms);
+console.log("wrote llms.txt");
+
+const lastmod = "2026-06-23";
 const sitemapUrls = pages.map((p) => ({
   loc: BIZ.domain + p.path,
   priority: p.path === "/" ? "1.0" : p.path === "/independent-living-houston/" ? "0.9" : "0.8",
