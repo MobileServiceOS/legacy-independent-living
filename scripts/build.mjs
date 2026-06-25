@@ -40,8 +40,8 @@ const BIZ = {
   legalName: "Legacy Independent Living LLC", // used in footer + schema legal spots
   tagline: "Live well. Live independently. Live legacy.",
   domain: "https://legacyindependentliving.net", // <-- swap if final domain differs
-  phoneDisplay: "(832) 317-1933",
-  phoneTel: "+18323171933",
+  phoneDisplay: "(713) 482-9021",
+  phoneTel: "+17134829021",
   email: "service@legacyindependentliving.net", // <-- swap to the real inbox
   // Service-area business — homes across the Houston metro, no public street address shown.
   city: "Houston",
@@ -528,7 +528,7 @@ pages.push({
   preload: `<link rel="preload" as="image" href="assets/img/logo-560.webp" imagesrcset="assets/img/logo-560.webp 560w, assets/img/logo.webp 900w" imagesizes="(max-width: 900px) 72vw, 440px" fetchpriority="high">\n`,
   title: "Legacy Independent Living | Independent Housing in Houston for Veterans & Those Rebuilding",
   description:
-    "Affordable independent living homes across Houston, TX for veterans and people experiencing homelessness. Rent a room and live on your own in a stable, private home that's yours. Call (832) 317-1933.",
+    "Affordable independent living homes across Houston, TX for veterans and people experiencing homelessness. Rent a room and live on your own in a stable, private home that's yours. Call (713) 482-9021.",
   schema: [orgNode, websiteNode, localBusinessNode, faqPageNode(FAQS)],
   body: `
   <section class="hero">
@@ -636,7 +636,7 @@ const geoPages = [
     h1: "Independent Living in Houston, TX",
     title: "Independent Living in Houston, TX | Affordable Rooms to Rent | Legacy",
     description:
-      "Affordable independent living homes across Houston, TX. Rent a room and live on your own in a stable, private home that's yours. For veterans and people rebuilding. Call (832) 317-1933.",
+      "Affordable independent living homes across Houston, TX. Rent a room and live on your own in a stable, private home that's yours. For veterans and people rebuilding. Call (713) 482-9021.",
     intro:
       "Legacy Independent Living offers affordable, independent housing across the Houston, Texas area. Rent a room in a clean, comfortable home and live entirely on your own terms. This is independent living: a private, stable home that's yours. It's open to veterans, to people coming out of homelessness, and to anyone who needs a stable, dignified place of their own.",
     localH2: "Homes across the Houston metro",
@@ -652,7 +652,7 @@ const geoPages = [
     h1: "Housing for Veterans in Houston, TX",
     title: "Housing for Veterans in Houston, TX | Independent Living | Legacy",
     description:
-      "Affordable independent housing for veterans across Houston, TX. Rent a room and live on your own in a stable home of your own near Houston-area VA services. Call (832) 317-1933.",
+      "Affordable independent housing for veterans across Houston, TX. Rent a room and live on your own in a stable home of your own near Houston-area VA services. Call (713) 482-9021.",
     intro:
       "You served your country, and you deserve a stable place of your own to come home to. Legacy Independent Living offers veterans affordable rooms in real homes across the Houston area, where you live independently on your own schedule, in a private place that's yours.",
     localH2: "Close to Houston-area VA services",
@@ -668,7 +668,7 @@ const geoPages = [
     h1: "Housing for People Experiencing Homelessness in Houston, TX",
     title: "Housing After Homelessness in Houston, TX | Independent Living | Legacy",
     description:
-      "Affordable independent housing in Houston, TX for people experiencing or leaving homelessness. Rent a room and live independently, with a stable address to rebuild from. Call (832) 317-1933.",
+      "Affordable independent housing in Houston, TX for people experiencing or leaving homelessness. Rent a room and live independently, with a stable address to rebuild from. Call (713) 482-9021.",
     intro:
       "Getting off the street or out of a shelter starts with a stable address. Legacy Independent Living offers affordable rooms in real homes across Houston where you can live independently and rebuild at your own pace, with dignity and privacy, in a place that's truly your own.",
     localH2: "A steady address to rebuild from",
@@ -826,7 +826,7 @@ pages.push({
   path: "/how-to-apply/",
   title: "How to Apply | Legacy Independent Living, Houston TX",
   description:
-    "Moving into a Legacy independent living home in Houston, TX is simple: reach out, see what's open, tour a room, and move in. Veterans and those rebuilding welcome. Call (832) 317-1933.",
+    "Moving into a Legacy independent living home in Houston, TX is simple: reach out, see what's open, tour a room, and move in. Veterans and those rebuilding welcome. Call (713) 482-9021.",
   schema: [orgNode, websiteNode, localBusinessNode, breadcrumbNode([
     { name: "Home", path: "/" },
     { name: "How to Apply", path: "/how-to-apply/" },
@@ -906,9 +906,9 @@ pages.push({
   depth: 1,
   path: "/contact/",
   ogType: "business.business",
-  title: "Contact | Legacy Independent Living, Houston TX | (832) 317-1933",
+  title: "Contact | Legacy Independent Living, Houston TX | (713) 482-9021",
   description:
-    "Contact Legacy Independent Living for independent housing across Houston, TX. Call (832) 317-1933, email us, or send an inquiry about available rooms for veterans and those rebuilding.",
+    "Contact Legacy Independent Living for independent housing across Houston, TX. Call (713) 482-9021, email us, or send an inquiry about available rooms for veterans and those rebuilding.",
   schema: [orgNode, websiteNode, localBusinessNode, breadcrumbNode([
     { name: "Home", path: "/" },
     { name: "Contact", path: "/contact/" },
