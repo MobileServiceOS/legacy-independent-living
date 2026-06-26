@@ -18,6 +18,7 @@ function htmlFiles(dir) {
   const out = [];
   for (const e of readdirSync(dir)) {
     if (e === "node_modules" || e === ".git" || e === "scripts") continue;
+    if (/^google[0-9a-f]+\.html$/.test(e)) continue; // Google Search Console verification file (not a page)
     const p = join(dir, e);
     if (statSync(p).isDirectory()) out.push(...htmlFiles(p));
     else if (e.endsWith(".html")) out.push(p);
