@@ -214,11 +214,23 @@ function jsonLd(nodes) {
 const FAQS = [
   {
     q: "What is Legacy Independent Living?",
-    a: `Legacy Independent Living offers independent living homes across the ${BIZ.city}, Texas area for veterans and people experiencing homelessness. You rent a room in a clean, comfortable house and live on your own. It is a real home of your own.`,
+    a: `Legacy Independent Living offers affordable independent living homes across the ${BIZ.city}, Texas area. You rent a comfortable room in a shared home and live on your own. We welcome veterans, working adults, people receiving SSI or SSDI, and anyone seeking a stable, affordable place of their own.`,
   },
   {
     q: "How does independent living work here?",
-    a: "You rent a room in a comfortable home and live independently, on your own schedule. You come and go as you please and run your own day-to-day life, just like in any other home. It is a private, stable place that is yours.",
+    a: "You rent a room in a comfortable, shared home and live independently, on your own schedule. You come and go as you please and run your own day-to-day life, just like in any other home. It is a private, stable place that is yours.",
+  },
+  {
+    q: "Is it a private room or shared housing?",
+    a: "Our homes are shared houses where you rent your own room and share the common areas, such as the kitchen and living room, with a few respectful housemates. Each home is kept clean, calm, and comfortable.",
+  },
+  {
+    q: "Do you accept SSI, SSDI, or a fixed income?",
+    a: "Yes. We welcome residents on SSI, SSDI, and other fixed or limited incomes, alongside veterans and working adults. Our rooms are priced to stay affordable. Contact us for current rates and what's available.",
+  },
+  {
+    q: "Can working adults rent a room?",
+    a: "Absolutely. Many residents are working adults who simply want an affordable, independent place to live. You keep your own schedule and come and go as you please.",
   },
   {
     q: "Where are the homes located?",
@@ -226,7 +238,7 @@ const FAQS = [
   },
   {
     q: "Who is it for?",
-    a: "Our homes are for veterans and for people who are experiencing or leaving homelessness, and for anyone 18 or older who needs a stable, affordable, independent place to live. Everyone deserves a dignified place to call home.",
+    a: "Our homes are for veterans, working adults, people receiving SSI or SSDI, and anyone 18 or older who needs a stable, affordable place to live. Everyone deserves a dignified place to call home.",
   },
   {
     q: "How do I apply or move in?",
@@ -513,13 +525,13 @@ const values = [
 
 const whoFor = [
   "Veterans looking for stable, independent housing",
-  "People experiencing or leaving homelessness",
-  "Anyone needing an affordable, independent place to call home",
+  "Working adults who need an affordable place to live",
+  "People receiving SSI or SSDI, or living on a fixed income",
+  "Anyone rebuilding after homelessness or a hard season",
   "Adults who want privacy and to live on their own terms",
-  "People ready for a steady address to rebuild from",
-  "Those who value a calm, respectful home environment",
-  "Residents who want independence without programs or curfews",
-  "Anyone in the greater Houston area seeking a fresh start",
+  "People looking for an affordable room to rent in Houston",
+  "Those who value a calm, respectful, shared home",
+  "Anyone in the greater Houston area in need of quality housing",
 ];
 
 pages.push({
@@ -528,9 +540,9 @@ pages.push({
   path: "/",
   ogType: "business.business",
   preload: `<link rel="preload" as="image" href="assets/img/logo-560.webp" imagesrcset="assets/img/logo-560.webp 560w, assets/img/logo.webp 900w" imagesizes="(max-width: 900px) 72vw, 440px" fetchpriority="high">\n`,
-  title: "Legacy Independent Living | Independent Housing in Houston for Veterans & Those Rebuilding",
+  title: "Legacy Independent Living | Affordable Rooms for Rent in Houston, TX",
   description:
-    "Affordable independent living homes across Houston, TX for veterans and people experiencing homelessness. Rent a room and live on your own in a stable, private home that's yours. Call (713) 482-9021.",
+    "Affordable independent living homes and rooms for rent across Houston, TX. For veterans, working adults, and people on SSI/SSDI. Rent a room in a shared home and live on your own. Call (713) 482-9021.",
   schema: [orgNode, websiteNode, localBusinessNode, faqPageNode(FAQS)],
   body: `
   <section class="hero">
@@ -539,7 +551,7 @@ pages.push({
         <img class="hero__logo" src="assets/img/logo.webp" srcset="assets/img/logo-560.webp 560w, assets/img/logo.webp 900w" sizes="(max-width: 900px) 72vw, 440px" width="900" height="900" fetchpriority="high" decoding="async" alt="Legacy Independent Living logo: a family walking home beneath a tree. Live well. Live independently. Live legacy.">
         <p class="visually-hidden">${esc(BIZ.tagline)}</p>
         <h1>Independent Living Homes in ${esc(BIZ.city)}, Texas</h1>
-        <p class="lede">Affordable, independent housing for veterans and people experiencing homelessness across the ${esc(BIZ.city)} area. Rent a room in a real home and live on your own terms. A stable, private place to call your own, close to work, transit, and VA services.</p>
+        <p class="lede">Affordable independent living homes across the ${esc(BIZ.city)} area for veterans, working adults, people on SSI/SSDI, and anyone seeking a stable place of their own. Rent a comfortable room in a shared home and live on your own terms, close to work, transit, and VA services.</p>
         <div class="hero__cta">
           <a class="btn btn--primary" href="#contact">Check availability</a>
           <a class="btn btn--ghost" href="tel:${BIZ.phoneTel}">Call ${esc(BIZ.phoneDisplay)}</a>
