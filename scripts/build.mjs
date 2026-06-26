@@ -43,6 +43,7 @@ const BIZ = {
   phoneDisplay: "(713) 482-9021",
   phoneTel: "+17134829021",
   email: "service@legacyindependentliving.net", // <-- swap to the real inbox
+  googleVerify: "KwLAu3ZiV5cOWIytZrSGy9MHBFFfLg05A6qRGPHSiGk", // Google Search Console verification
   // Service-area business — homes across the Houston metro, no public street address shown.
   city: "Houston",
   region: "TX",
@@ -261,6 +262,7 @@ function head(page) {
 <title>${esc(page.title)}</title>
 <meta name="description" content="${esc(page.description)}">
 <meta name="robots" content="${robots}">
+<meta name="google-site-verification" content="${BIZ.googleVerify}">
 <link rel="canonical" href="${canonical}">
 
 <!-- Geo targeting -->
