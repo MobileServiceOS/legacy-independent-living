@@ -123,7 +123,7 @@ export function PriorityBadge({ priority }: { priority: MaintenancePriority }) {
 
 export function DemoTag() {
   return (
-    <span className="ml-1.5 rounded border border-dashed border-trunk/50 px-1.5 py-px align-middle text-[0.62rem] font-extrabold uppercase tracking-wider text-trunk">
+    <span data-demo className="ml-1.5 rounded border border-dashed border-trunk/50 px-1.5 py-px align-middle text-[0.62rem] font-extrabold uppercase tracking-wider text-trunk">
       Demo
     </span>
   );

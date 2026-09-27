@@ -80,8 +80,7 @@ test("apply → approve → convert → sign in → pay → receipt → $0", asy
   // 5. Pay rent (sandbox checkout)
   await page.getByTestId("pay-rent").click();
   await expect(page.getByLabel("How much would you like to pay?")).toHaveValue("750.00");
-  await page.getByText("Debit card").click();
-  await page.getByRole("button", { name: "Continue to secure payment" }).click();
+  await page.getByRole("button", { name: /^Continue to/ }).click();
   await expect(page).toHaveURL(/\/pay\/sandbox\//);
   await page.getByRole("button", { name: "Pay $750.00" }).click();
   await expect(page.getByTestId("payment-result")).toHaveText("Payment successful");

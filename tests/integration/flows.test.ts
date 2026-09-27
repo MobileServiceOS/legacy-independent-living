@@ -18,6 +18,7 @@ const MIGRATIONS = join(import.meta.dirname, "../../prisma/migrations");
 
 process.env.DATABASE_URL = DB_URL;
 process.env.PAYMENTS_PROVIDER = "mock";
+process.env.MOCK_PAYMENT_METHODS = "PAYPAL,DEBIT_CARD,CREDIT_CARD,ACH"; // exercise every sandbox method
 process.env.APP_URL = "http://localhost:3000";
 process.env.APP_TODAY = "2026-09-27";
 process.env.STORAGE_DIR = join(import.meta.dirname, "../../.test-storage");

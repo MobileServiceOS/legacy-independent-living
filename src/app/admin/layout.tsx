@@ -51,7 +51,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
       <div className="min-w-0">
         {demo > 0 ? (
-          <div className="no-print border-b border-warn/20 bg-warn-bg px-4 py-2 text-center text-sm font-semibold text-warn">
+          <div data-demo className="no-print border-b border-warn/20 bg-warn-bg px-4 py-2 text-center text-sm font-semibold text-warn">
             Demo data is loaded. Records marked <span className="rounded border border-dashed border-trunk/50 px-1 text-[0.7rem] uppercase text-trunk">Demo</span> are
             fictional examples — not real Legacy residents or properties.
           </div>

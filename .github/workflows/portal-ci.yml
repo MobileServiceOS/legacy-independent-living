@@ -97,6 +97,14 @@ jobs:
         env:
           CI: "true"
           SCREENSHOTS: ${{ contains(github.event.head_commit.message, '[screenshots]') && '1' || '' }}
+      - name: Store screenshots (App Store iPhone/iPad + PWA) on fresh demo data
+        id: store
+        if: success() && contains(github.event.head_commit.message, '[store-screenshots]')
+        run: |
+          npx prisma migrate reset --force
+          STORE_SCREENSHOTS=1 npx playwright test store-screenshots --project=desktop 2>&1 | tee ci-logs/store-screenshots.log
+        env:
+          CI: "true"
       - name: Annotate failures
         if: always()
         run: |
@@ -110,6 +118,7 @@ jobs:
           add "${{ steps.build.outcome }}" build
           add "${{ steps.seed.outcome }}" seed-smoke-test
           add "${{ steps.e2e.outcome }}" end-to-end-tests
+          add "${{ steps.store.outcome }}" store-screenshots
           [ -n "$files" ] && node scripts/ci-annotate.mjs $files || echo "no failures"
       - name: Fail if any check failed
         if: steps.lint.outcome == 'failure' || steps.unit.outcome == 'failure' || steps.db.outcome == 'failure' || steps.integration.outcome == 'failure'
@@ -121,12 +130,14 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add package-lock.json
           if [ -n "$SCREENSHOTS" ]; then git add docs/screenshots; fi
+          if [ -n "$STORE" ]; then git add docs/store public/screenshots src/app/manifest-screenshots.json; fi
           if git diff --cached --quiet; then echo "nothing to commit"; else
             git commit -m "chore(ci): update lockfile / screenshots [skip ci]"
             git push origin HEAD:${{ github.ref_name }}
           fi
         env:
           SCREENSHOTS: ${{ contains(github.event.head_commit.message, '[screenshots]') && '1' || '' }}
+          STORE: ${{ contains(github.event.head_commit.message, '[store-screenshots]') && '1' || '' }}
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4

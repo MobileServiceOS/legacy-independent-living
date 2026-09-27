@@ -88,7 +88,7 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
             <SubmitButton className="min-h-14 w-full text-lg" pendingText="Opening secure checkout…">
               {provider.methods.length === 1 && provider.methods[0] === "PAYPAL" ? "Continue to PayPal" : "Continue to secure payment"}
             </SubmitButton>
-            <p className="flex items-start gap-2 text-sm text-muted">
+            <p className="flex items-start gap-2 text-sm text-muted" data-sandbox={sandbox || undefined}>
               <Icon name="shield" className="mt-0.5 size-4 shrink-0" />
               {sandbox
                 ? "Sandbox mode: no real money will move. Card and bank details are never entered or stored in this app."

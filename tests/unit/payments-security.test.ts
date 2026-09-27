@@ -226,6 +226,13 @@ describe("stripe integration (offline)", () => {
     );
   });
 
+  test("mock provider mirrors production (PayPal) unless configured", async () => {
+    const { parseMethods } = await import("../../src/lib/payments/mock.ts");
+    assert.deepEqual([...parseMethods(undefined)], ["PAYPAL"]);
+    assert.deepEqual([...parseMethods("ach, debit_card, bogus")], ["ACH", "DEBIT_CARD"]);
+    assert.deepEqual([...parseMethods("bogus")], ["PAYPAL"]);
+  });
+
   test("mock provider", async () => {
     const mock = new MockPaymentProvider();
     const s = await mock.createCheckout({ paymentId: "pay_1", residentId: "r", amountCents: 100, method: "ACH", description: "d", successUrl: "s", cancelUrl: "c" });
