@@ -32,7 +32,8 @@ test("signed-out users are sent to sign in", async ({ page }) => {
 
 test("wrong password shows a generic error", async ({ page }) => {
   await login(page, { email: RESIDENT.email, password: "nope-nope-nope1" });
-  await expect(page.getByRole("alert")).toContainText("don't match");
+  await expect(page.getByRole("alert").filter({ hasText: "don't match" })).toBeVisible();
+  await expect(page).toHaveURL(/\/login/);
 });
 
 test("resident sees only their own world", async ({ page }) => {

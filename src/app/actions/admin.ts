@@ -80,7 +80,9 @@ export async function placeResidentAction(prev: ActionState, fd: FormData): Prom
   return runAction(prev, fd, placementSchema, async (input) => {
     const user = await requireActionPermission("residents:write");
     const { residentId, inviteUrl } = await placeResident(actorOf(user), input);
-    refreshAdmin();
+    // No revalidation of the current page on purpose: the form must stay mounted so the
+    // one-time setup link can be shown and copied. Admin pages are dynamic, so every
+    // other screen is fresh on the next navigation.
     return {
       message: `${input.firstName} ${input.lastName} is now a resident. Share the setup link below so they can sign in.`,
       data: { inviteUrl, residentUrl: `/admin/residents/${residentId}` },
