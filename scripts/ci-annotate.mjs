@@ -4,7 +4,8 @@
  * so failures are readable from the Checks API without downloading raw logs.
  *   node scripts/ci-annotate.mjs ci-logs/*.log
  */
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { basename } from "node:path";
 
 const escape = (s) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
@@ -26,4 +27,19 @@ for (const file of process.argv.slice(2)) {
   for (let end = text.length; end > 0 && chunks.length < 2; end -= 3900) chunks.push(text.slice(Math.max(0, end - 3900), end));
   chunks.forEach((c, i) => console.log(`::error title=${basename(file)} [${i + 1}/${chunks.length} from end]::${escape(c)}`));
   continue;
+}
+
+// Playwright page snapshots (what the page actually showed when a test failed).
+function walk(dir, out = []) {
+  if (!existsSync(dir)) return out;
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) walk(p, out);
+    else if (name === "error-context.md" && !p.includes("retry")) out.push(p);
+  }
+  return out;
+}
+for (const f of walk("test-results").slice(0, 3)) {
+  const text = stripAnsi(readFileSync(f, "utf8"));
+  console.log(`::error title=snapshot ${f.split("/").at(-2)?.slice(0, 60)}::${escape(text.slice(0, 3900))}`);
 }
