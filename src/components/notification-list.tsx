@@ -5,7 +5,7 @@ import { EmptyState } from "./ui";
 import { formatDateTime } from "@/lib/format";
 
 export function NotificationList({ items, timeZone }: { items: Notification[]; timeZone: string }) {
-  if (items.length === 0) return <EmptyState title="No notifications" icon="bell">We'll let you know about rent, payments and announcements here.</EmptyState>;
+  if (items.length === 0) return <EmptyState title="No notifications" icon="bell">We’ll let you know about rent, payments and announcements here.</EmptyState>;
   const unread = items.some((n) => !n.readAt);
   return (
     <div>

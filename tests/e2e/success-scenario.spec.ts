@@ -85,7 +85,7 @@ test("apply → approve → convert → sign in → pay → receipt → $0", asy
   // 7. Balance is $0 and the ledger shows both lines
   await page.goto("/home");
   await expect(page.getByTestId("balance")).toHaveText("$0.00");
-  await expect(page.getByText("You're all paid up")).toBeVisible();
+  await expect(page.getByText("all paid up")).toBeVisible();
   await page.goto("/payments");
   await expect(page.getByText("Monthly rent")).toBeVisible();
   await expect(page.getByText("-$750.00")).toBeVisible();

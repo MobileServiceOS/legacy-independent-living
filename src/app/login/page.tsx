@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
     <AuthShell title="Welcome home" subtitle="Sign in to see your balance, pay rent, and get your receipts.">
       {signedOut ? (
         <div className="mb-4">
-          <Notice tone="ok">You've been signed out.</Notice>
+          <Notice tone="ok">You’ve been signed out.</Notice>
         </div>
       ) : null}
       <ActionForm action={loginAction} className="space-y-4">

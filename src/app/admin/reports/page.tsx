@@ -157,5 +157,5 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 }
 
 function PrintHint() {
-  return <span className="no-print text-sm text-muted">Tip: use your browser's Print to save a PDF.</span>;
+  return <span className="no-print text-sm text-muted">Tip: use your browser’s Print to save a PDF.</span>;
 }

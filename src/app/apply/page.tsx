@@ -58,7 +58,7 @@ export default function ApplyPage() {
         </div>
 
         <div className="rounded-xl bg-paper-2 p-4 text-[0.95rem] text-muted">
-          We won't ask for your Social Security number, bank details or ID on this form. If we need anything else, we'll talk with you directly.
+          We won’t ask for your Social Security number, bank details or ID on this form. If we need anything else, we’ll talk with you directly.
         </div>
         <Checkbox name="consent" label="The information I've entered is accurate, and Legacy Independent Living may contact me about housing." />
         <SubmitButton className="w-full" pendingText="Sending…">

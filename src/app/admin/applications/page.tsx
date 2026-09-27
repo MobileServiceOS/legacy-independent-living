@@ -30,7 +30,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
         title="Applications"
         description={
           <>
-            Public application form: <a href="/apply" target="_blank" rel="noopener">/apply</a> — link it from the website's “How to apply” page.
+            Public application form: <a href="/apply" target="_blank" rel="noopener">/apply</a> — link it from the website’s “How to apply” page.
           </>
         }
       />

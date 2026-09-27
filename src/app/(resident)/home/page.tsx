@@ -72,7 +72,7 @@ export default async function ResidentHome() {
         <div className="space-y-4 px-6 py-5">
           {paidUp ? (
             <p className="flex items-center gap-2 text-lg font-bold text-ok">
-              <Icon name="check" className="size-6" /> You're all paid up. Thank you!
+              <Icon name="check" className="size-6" /> You’re all paid up. Thank you!
             </p>
           ) : null}
           {position.nextDueDate ? (
@@ -143,7 +143,7 @@ export default async function ResidentHome() {
             ))}
           </ul>
         ) : (
-          <p className="text-muted">You're all caught up.</p>
+          <p className="text-muted">You’re all caught up.</p>
         )}
       </Card>
 

@@ -384,7 +384,7 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
                 <Disclosure summary="Account setup link">
                   <ActionForm action={reissueInviteAction} copyResult={{ key: "inviteUrl", label: "New setup link" }}>
                     <Hidden name="residentId" value={r.id} />
-                    <p className="mb-3 text-sm text-muted">The resident hasn't set a password yet. Create a fresh link to text or email them.</p>
+                    <p className="mb-3 text-sm text-muted">The resident hasn’t set a password yet. Create a fresh link to text or email them.</p>
                     <SubmitButton small variant="secondary">
                       Create new setup link
                     </SubmitButton>

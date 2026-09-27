@@ -14,6 +14,11 @@ const stripAnsi = (s) => s.replace(/\u001b\[[0-9;]*m/g, "");
 for (const file of process.argv.slice(2)) {
   if (!existsSync(file)) continue;
   const lines = stripAnsi(readFileSync(file, "utf8")).split("\n");
-  const tail = lines.slice(-220).join("\n").slice(-60000);
-  console.log(`::error title=${basename(file)}::${escape(tail)}`);
+  // The Checks API keeps ~4 KB per annotation, so send the tail (where test
+  // reporters print their failure summary) in 3.9 KB chunks, last chunk first.
+  const text = lines.join("\n");
+  const chunks = [];
+  for (let end = text.length; end > 0 && chunks.length < 2; end -= 3900) chunks.push(text.slice(Math.max(0, end - 3900), end));
+  chunks.forEach((c, i) => console.log(`::error title=${basename(file)} [${i + 1}/${chunks.length} from end]::${escape(c)}`));
+  continue;
 }

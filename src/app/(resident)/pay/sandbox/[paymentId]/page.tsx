@@ -36,7 +36,7 @@ export default async function SandboxCheckout({ params }: { params: Promise<{ pa
     <div className="space-y-5">
       <h1 className="text-4xl">Secure checkout</h1>
       <Notice tone="warn" title="Sandbox — test mode">
-        This stands in for the payment processor's page. No real money moves. With Stripe connected, residents enter card or bank details on Stripe, never in this app.
+        This stands in for the payment processor’s page. No real money moves. With Stripe connected, residents enter card or bank details on Stripe, never in this app.
       </Notice>
       <Card>
         <dl className="space-y-2">

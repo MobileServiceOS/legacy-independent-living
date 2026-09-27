@@ -63,6 +63,7 @@ jobs:
         env:
           PGPASSWORD: legacy
       - name: Typecheck
+        id: typecheck
         run: npm run typecheck 2>&1 | tee ci-logs/typecheck.log
       - name: Lint
         id: lint
@@ -81,18 +82,32 @@ jobs:
         continue-on-error: true
         run: npm run test:integration 2>&1 | tee ci-logs/integration-tests.log
       - name: Build
+        id: build
         run: npm run build 2>&1 | tee ci-logs/build.log
       - name: Seed smoke test
+        id: seed
         run: npx prisma migrate reset --force 2>&1 | tee ci-logs/seed-smoke-test.log
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       - name: End-to-end tests
+        id: e2e
         run: npm run test:e2e 2>&1 | tee ci-logs/end-to-end-tests.log
         env:
           CI: "true"
       - name: Annotate failures
-        if: failure() || steps.lint.outcome == 'failure' || steps.unit.outcome == 'failure' || steps.db.outcome == 'failure' || steps.integration.outcome == 'failure'
-        run: node scripts/ci-annotate.mjs ci-logs/*.log
+        if: always()
+        run: |
+          files=""
+          add() { [ "$1" = "failure" ] && files="$files ci-logs/$2.log" || true; }
+          add "${{ steps.typecheck.outcome }}" typecheck
+          add "${{ steps.lint.outcome }}" lint
+          add "${{ steps.unit.outcome }}" unit-tests
+          add "${{ steps.db.outcome }}" database-integrity-tests
+          add "${{ steps.integration.outcome }}" integration-tests
+          add "${{ steps.build.outcome }}" build
+          add "${{ steps.seed.outcome }}" seed-smoke-test
+          add "${{ steps.e2e.outcome }}" end-to-end-tests
+          [ -n "$files" ] && node scripts/ci-annotate.mjs $files || echo "no failures"
       - name: Fail if any check failed
         if: steps.lint.outcome == 'failure' || steps.unit.outcome == 'failure' || steps.db.outcome == 'failure' || steps.integration.outcome == 'failure'
         run: exit 1
