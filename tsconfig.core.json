@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "incremental": false,
+    "erasableSyntaxOnly": true,
+    "plugins": []
+  },
+  "include": [
+    "src/domain/**/*.ts",
+    "src/lib/security/**/*.ts",
+    "src/lib/payments/provider.ts",
+    "src/lib/payments/mock.ts",
+    "src/lib/payments/stripe*.ts",
+    "tests/unit/**/*.ts"
+  ]
+}

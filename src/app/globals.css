@@ -1,0 +1,134 @@
+@import "tailwindcss";
+
+/* Brand tokens — derived from legacyindependentliving.net (tree + family + house logo). */
+@theme {
+  --color-forest: #4a5533;
+  --color-forest-deep: #3a431f;
+  --color-sage: #7e814c;
+  --color-sage-light: #a8b06a;
+  --color-leaf: #8fa05a;
+  --color-trunk: #634c2c;
+  --color-brown-soft: #7c6549;
+  --color-cream: #f5e8d5;
+  --color-paper: #fbf8f1;
+  --color-paper-2: #f3eee2;
+  --color-ink: #2e2a22;
+  --color-muted: #5b5547;
+  --color-line: #e2dac6;
+
+  /* Status palette — every pair ≥ 4.5:1 contrast */
+  --color-ok: #25592f;
+  --color-ok-bg: #e2efdc;
+  --color-warn: #7a4d00;
+  --color-warn-bg: #fbeccb;
+  --color-bad: #8f2418;
+  --color-bad-bg: #f8e0da;
+  --color-info: #1f4f6d;
+  --color-info-bg: #dde9f1;
+  --color-partial: #5b3d7a;
+  --color-partial-bg: #ece4f4;
+
+  --font-serif: var(--font-cormorant), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-mulish), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px rgba(46, 42, 34, 0.06), 0 6px 20px rgba(46, 42, 34, 0.06);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    color-scheme: light;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-serif text-forest-deep;
+    font-weight: 600;
+    line-height: 1.15;
+  }
+  a {
+    @apply text-forest underline-offset-4;
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-sage-light);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 1rem; /* ≥16px stops iOS zoom-on-focus */
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Buttons are @utility so they compose (Tailwind v4 only @applies utilities). */
+@utility btn {
+  @apply inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 text-base font-bold no-underline transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+}
+@utility btn-primary {
+  @apply btn bg-forest text-white hover:bg-forest-deep;
+}
+@utility btn-secondary {
+  @apply btn border border-forest/30 bg-white text-forest hover:bg-paper-2;
+}
+@utility btn-danger {
+  @apply btn border border-bad/30 bg-white text-bad hover:bg-bad-bg;
+}
+@utility btn-sm {
+  @apply min-h-10! rounded-lg! px-3! text-sm!;
+}
+
+@layer components {
+  .card {
+    @apply rounded-[var(--radius-card)] border border-line bg-white;
+    box-shadow: var(--shadow-card);
+  }
+  .input {
+    @apply block min-h-12 w-full rounded-xl border border-line bg-white px-4 py-2.5 text-ink shadow-inner shadow-black/[.02] placeholder:text-muted/70 focus:border-forest focus:outline-none focus:ring-2 focus:ring-sage-light/60 aria-[invalid=true]:border-bad;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-bold text-ink;
+  }
+  .eyebrow {
+    @apply text-xs font-extrabold uppercase tracking-[0.16em] text-[#5f6234];
+  }
+  .table {
+    @apply w-full border-collapse text-left text-[0.95rem];
+  }
+  .table th {
+    @apply border-b border-line bg-paper-2/60 px-3 py-2.5 text-xs font-extrabold uppercase tracking-wider text-muted;
+  }
+  .table td {
+    @apply border-b border-line/70 px-3 py-3 align-middle;
+  }
+  .table tbody tr:hover {
+    @apply bg-paper/80;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+  .card {
+    box-shadow: none;
+    border-color: #ccc;
+  }
+}

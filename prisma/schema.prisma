@@ -1,0 +1,503 @@
+// Legacy Independent Living — operational database
+//
+// Financial integrity rules (enforced in SQL, see migrations/0001_init):
+//   * money is integer cents
+//   * ledger_entries and audit_logs are append-only (UPDATE/DELETE blocked by trigger)
+//   * ledger sign rules per entry type (CHECK constraint)
+//   * one active room assignment per room and per resident (partial unique index)
+//   * one active rent schedule per resident (partial unique index)
+//   * residents/properties/rooms referenced by financial rows cannot be deleted (RESTRICT)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  RESIDENT
+}
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  DISABLED
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  RESERVED
+  MAINTENANCE
+}
+
+enum ResidentStatus {
+  ACTIVE
+  MOVED_OUT
+}
+
+enum ApplicationStatus {
+  NEW
+  UNDER_REVIEW
+  APPROVED
+  DECLINED
+  WAITLISTED
+  CONVERTED
+}
+
+enum LedgerEntryType {
+  RENT_CHARGE
+  PAYMENT
+  LATE_FEE
+  OTHER_CHARGE
+  CREDIT
+  ADJUSTMENT
+  REFUND
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
+enum PaymentMethodType {
+  ACH
+  DEBIT_CARD
+  CREDIT_CARD
+  CASH
+  MONEY_ORDER
+  CHECK
+  EXTERNAL
+}
+
+enum PaymentProviderName {
+  MOCK
+  STRIPE
+  OFFLINE
+}
+
+enum DocumentKind {
+  HOUSING_AGREEMENT
+  ID_REFERENCE
+  OTHER
+}
+
+enum NotificationType {
+  RENT_DUE_SOON
+  RENT_DUE_TODAY
+  RENT_OVERDUE
+  PAYMENT_SUCCEEDED
+  PAYMENT_PENDING
+  PAYMENT_FAILED
+  PAYMENT_REFUNDED
+  APPLICATION_RECEIVED
+  APPLICATION_STATUS
+  ANNOUNCEMENT
+  ACCOUNT
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  name         String
+  role         Role
+  status       UserStatus @default(INVITED)
+  passwordHash String?    @map("password_hash")
+  lastLoginAt  DateTime?  @map("last_login_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  resident      Resident?
+  sessions      Session[]
+  invites       InviteToken[]  @relation("InviteUser")
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  tokenHash  String   @unique @map("token_hash")
+  expiresAt  DateTime @map("expires_at")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+  ip         String?
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model InviteToken {
+  id          String    @id @default(cuid())
+  userId      String    @map("user_id")
+  tokenHash   String    @unique @map("token_hash")
+  expiresAt   DateTime  @map("expires_at")
+  usedAt      DateTime? @map("used_at")
+  createdById String?   @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user User @relation("InviteUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("invite_tokens")
+}
+
+model Property {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  addressLine1 String    @map("address_line1")
+  addressLine2 String?   @map("address_line2")
+  city         String
+  state        String
+  postalCode   String    @map("postal_code")
+  notes        String?
+  isDemo       Boolean   @default(false) @map("is_demo")
+  archivedAt   DateTime? @map("archived_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  rooms         Room[]
+  announcements Announcement[]
+
+  @@map("properties")
+}
+
+model Room {
+  id               String     @id @default(cuid())
+  propertyId       String     @map("property_id")
+  name             String
+  defaultRentCents Int        @map("default_rent_cents")
+  status           RoomStatus @default(AVAILABLE)
+  notes            String?
+  isDemo           Boolean    @default(false) @map("is_demo")
+  createdAt        DateTime   @default(now()) @map("created_at")
+  updatedAt        DateTime   @updatedAt @map("updated_at")
+
+  property    Property         @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  assignments RoomAssignment[]
+
+  @@unique([propertyId, name])
+  @@map("rooms")
+}
+
+model Resident {
+  id                       String         @id @default(cuid())
+  userId                   String?        @unique @map("user_id")
+  applicationId            String?        @unique @map("application_id")
+  firstName                String         @map("first_name")
+  lastName                 String         @map("last_name")
+  email                    String
+  phone                    String
+  emergencyContactName     String?        @map("emergency_contact_name")
+  emergencyContactPhone    String?        @map("emergency_contact_phone")
+  emergencyContactRelation String?        @map("emergency_contact_relation")
+  status                   ResidentStatus @default(ACTIVE)
+  moveInDate               DateTime       @map("move_in_date") @db.Date
+  moveOutDate              DateTime?      @map("move_out_date") @db.Date
+  notes                    String?
+  isDemo                   Boolean        @default(false) @map("is_demo")
+  createdAt                DateTime       @default(now()) @map("created_at")
+  updatedAt                DateTime       @updatedAt @map("updated_at")
+
+  user           User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  application    Application?      @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  assignments    RoomAssignment[]
+  rentSchedules  RentSchedule[]
+  ledgerEntries  LedgerEntry[]
+  payments       Payment[]
+  paymentMethods PaymentMethod[]
+  documents      Document[]
+
+  @@index([status])
+  @@index([lastName, firstName])
+  @@map("residents")
+}
+
+model RoomAssignment {
+  id          String    @id @default(cuid())
+  residentId  String    @map("resident_id")
+  roomId      String    @map("room_id")
+  startDate   DateTime  @map("start_date") @db.Date
+  endDate     DateTime? @map("end_date") @db.Date
+  reason      String?
+  createdById String?   @map("created_by_id")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  resident Resident @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  room     Room     @relation(fields: [roomId], references: [id], onDelete: Restrict)
+
+  @@index([roomId])
+  @@index([residentId])
+  @@map("room_assignments")
+}
+
+model RentSchedule {
+  id               String    @id @default(cuid())
+  residentId       String    @map("resident_id")
+  monthlyRentCents Int       @map("monthly_rent_cents")
+  dueDay           Int       @map("due_day")
+  startDate        DateTime  @map("start_date") @db.Date
+  endDate          DateTime? @map("end_date") @db.Date
+  createdById      String?   @map("created_by_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+
+  resident      Resident      @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  ledgerEntries LedgerEntry[]
+
+  @@index([residentId])
+  @@map("rent_schedules")
+}
+
+model LedgerEntry {
+  id             String          @id @default(cuid())
+  residentId     String          @map("resident_id")
+  type           LedgerEntryType
+  amountCents    Int             @map("amount_cents")
+  description    String
+  effectiveDate  DateTime        @map("effective_date") @db.Date
+  dueDate        DateTime?       @map("due_date") @db.Date
+  paymentId      String?         @map("payment_id")
+  rentScheduleId String?         @map("rent_schedule_id")
+  relatedEntryId String?         @map("related_entry_id")
+  idempotencyKey String?         @unique @map("idempotency_key")
+  createdById    String?         @map("created_by_id")
+  createdAt      DateTime        @default(now()) @map("created_at")
+
+  resident     Resident      @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  payment      Payment?      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  rentSchedule RentSchedule? @relation(fields: [rentScheduleId], references: [id], onDelete: Restrict)
+  relatedEntry LedgerEntry?  @relation("RelatedEntry", fields: [relatedEntryId], references: [id], onDelete: Restrict)
+  relatedTo    LedgerEntry[] @relation("RelatedEntry")
+
+  @@index([residentId, effectiveDate])
+  @@index([paymentId])
+  @@map("ledger_entries")
+}
+
+model Payment {
+  id              String              @id @default(cuid())
+  residentId      String              @map("resident_id")
+  amountCents     Int                 @map("amount_cents")
+  method          PaymentMethodType
+  status          PaymentStatus       @default(PENDING)
+  provider        PaymentProviderName
+  providerRef     String?             @unique @map("provider_ref")
+  receiptNumber   String              @unique @map("receipt_number")
+  reference       String?
+  note            String?
+  paidOn          DateTime?           @map("paid_on") @db.Date
+  processedAt     DateTime?           @map("processed_at")
+  failureReason   String?             @map("failure_reason")
+  refundedAt      DateTime?           @map("refunded_at")
+  refundRef       String?             @map("refund_ref")
+  cardBrand       String?             @map("card_brand")
+  last4           String?
+  initiatedById   String?             @map("initiated_by_id")
+  recordedById    String?             @map("recorded_by_id")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+
+  resident      Resident       @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  ledgerEntries LedgerEntry[]
+  events        PaymentEvent[]
+
+  @@index([residentId, createdAt])
+  @@index([status])
+  @@index([paidOn])
+  @@map("payments")
+}
+
+model PaymentEvent {
+  id        String              @id @default(cuid())
+  paymentId String?             @map("payment_id")
+  provider  PaymentProviderName
+  eventId   String              @unique @map("event_id")
+  kind      String
+  payload   Json?
+  createdAt DateTime            @default(now()) @map("created_at")
+
+  payment Payment? @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@index([paymentId])
+  @@map("payment_events")
+}
+
+/// Tokenized methods only — never raw card/bank numbers. Supports future autopay.
+model PaymentMethod {
+  id                String              @id @default(cuid())
+  residentId        String              @map("resident_id")
+  provider          PaymentProviderName
+  providerMethodRef String              @map("provider_method_ref")
+  type              PaymentMethodType
+  brand             String?
+  last4             String?
+  isDefault         Boolean             @default(false) @map("is_default")
+  autopayEnabled    Boolean             @default(false) @map("autopay_enabled")
+  removedAt         DateTime?           @map("removed_at")
+  createdAt         DateTime            @default(now()) @map("created_at")
+
+  resident Resident @relation(fields: [residentId], references: [id], onDelete: Restrict)
+
+  @@unique([provider, providerMethodRef])
+  @@index([residentId])
+  @@map("payment_methods")
+}
+
+model Application {
+  id                    String            @id @default(cuid())
+  status                ApplicationStatus @default(NEW)
+  firstName             String            @map("first_name")
+  lastName              String            @map("last_name")
+  email                 String
+  phone                 String
+  preferredContact      String?           @map("preferred_contact")
+  desiredMoveInDate     DateTime?         @map("desired_move_in_date") @db.Date
+  housingSituation      String?           @map("housing_situation")
+  isVeteran             Boolean?          @map("is_veteran")
+  referralSource        String?           @map("referral_source")
+  message               String?
+  emergencyContactName  String?           @map("emergency_contact_name")
+  emergencyContactPhone String?           @map("emergency_contact_phone")
+  consentAt             DateTime          @map("consent_at")
+  reviewNotes           String?           @map("review_notes")
+  reviewedById          String?           @map("reviewed_by_id")
+  decidedAt             DateTime?         @map("decided_at")
+  isDemo                Boolean           @default(false) @map("is_demo")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+
+  resident Resident?
+
+  @@index([status, createdAt])
+  @@map("applications")
+}
+
+model Document {
+  id                String       @id @default(cuid())
+  residentId        String       @map("resident_id")
+  kind              DocumentKind
+  title             String
+  storageKey        String?      @unique @map("storage_key")
+  fileName          String?      @map("file_name")
+  mimeType          String?      @map("mime_type")
+  sizeBytes         Int?         @map("size_bytes")
+  referenceNote     String?      @map("reference_note")
+  visibleToResident Boolean      @default(true) @map("visible_to_resident")
+  uploadedById      String?      @map("uploaded_by_id")
+  archivedAt        DateTime?    @map("archived_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+
+  resident Resident @relation(fields: [residentId], references: [id], onDelete: Restrict)
+
+  @@index([residentId])
+  @@map("documents")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  dedupeKey String?          @unique @map("dedupe_key")
+  readAt    DateTime?        @map("read_at")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user       User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries NotificationDelivery[]
+
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model NotificationDelivery {
+  id             String              @id @default(cuid())
+  notificationId String              @map("notification_id")
+  channel        NotificationChannel
+  status         DeliveryStatus      @default(PENDING)
+  attemptedAt    DateTime?           @map("attempted_at")
+  error          String?
+  createdAt      DateTime            @default(now()) @map("created_at")
+
+  notification Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@unique([notificationId, channel])
+  @@index([status, channel])
+  @@map("notification_deliveries")
+}
+
+model Announcement {
+  id          String   @id @default(cuid())
+  title       String
+  body        String
+  propertyId  String?  @map("property_id")
+  createdById String   @map("created_by_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+
+  @@map("announcements")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?  @map("actor_id")
+  actorEmail String?  @map("actor_email")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  metadata   Json     @default("{}")
+  ip         String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([actorId])
+  @@map("audit_logs")
+}
+
+/// Singleton row (id = 1) — business rules the owner can tune.
+model Settings {
+  id                     Int      @id @default(1)
+  businessName           String   @default("Legacy Independent Living") @map("business_name")
+  timezone               String   @default("America/Chicago")
+  chargeLeadDays         Int      @default(7) @map("charge_lead_days")
+  graceDays              Int      @default(5) @map("grace_days")
+  lateFeeCents           Int      @default(0) @map("late_fee_cents")
+  allowPartialPayments   Boolean  @default(true) @map("allow_partial_payments")
+  minPartialPaymentCents Int      @default(2500) @map("min_partial_payment_cents")
+  onlinePaymentsEnabled  Boolean  @default(true) @map("online_payments_enabled")
+  supportPhone           String?  @map("support_phone")
+  supportEmail           String?  @map("support_email")
+  updatedById            String?  @map("updated_by_id")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
