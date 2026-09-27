@@ -30,7 +30,7 @@ export async function loginAction(prev: ActionState, formData: FormData): Promis
     const allowed =
       user.role === "ADMIN"
         ? /^\/(admin|receipts)(\/|\?|$)/.test(target)
-        : /^\/(home|pay|payments|documents|notifications|profile|receipts)(\/|\?|$)/.test(target);
+        : /^\/(home|pay|payments|documents|notifications|profile|receipts|maintenance)(\/|\?|$)/.test(target);
     return { redirectTo: allowed ? target : home };
   });
 }

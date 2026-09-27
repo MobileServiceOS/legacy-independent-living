@@ -8,6 +8,7 @@ import { requirePagePermission } from "@/lib/auth/session";
 import { paymentDate } from "@/lib/format";
 import { businessToday, getSettings } from "@/lib/settings";
 import { adminDashboard } from "@/server/queries";
+import { maintenanceCounts } from "@/server/maintenance";
 import { ensureRentEngineCurrent } from "@/server/rent-engine";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -18,7 +19,7 @@ export default async function AdminDashboard() {
   await ensureRentEngineCurrent();
   const settings = await getSettings();
   const today = businessToday(settings);
-  const d = await adminDashboard(today);
+  const [d, repairs] = await Promise.all([adminDashboard(today), maintenanceCounts()]);
   const { occupancy: o, collection: c } = d;
 
   return (
@@ -102,6 +103,17 @@ export default async function AdminDashboard() {
             <p className="text-muted">waiting for review</p>
             <Link href="/admin/applications" className="btn-secondary btn-sm mt-3">
               Review applications
+            </Link>
+          </Card>
+          <Card title="Maintenance">
+            <p className="font-serif text-4xl font-semibold text-forest-deep tabular-nums">{repairs.open}</p>
+            <p className="text-muted">
+              open request{repairs.open === 1 ? "" : "s"}
+              {repairs.urgent ? <span className="font-bold text-bad"> · {repairs.urgent} urgent</span> : null}
+              {repairs.submitted ? <span> · {repairs.submitted} new</span> : null}
+            </p>
+            <Link href="/admin/maintenance" className="btn-secondary btn-sm mt-3">
+              Open maintenance queue
             </Link>
           </Card>
           <Card title="Recent payments" action={<Link href="/admin/payments" className="text-sm font-bold">All</Link>}>

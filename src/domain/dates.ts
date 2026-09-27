@@ -131,3 +131,45 @@ export function formatShort(value: DateOnly): string {
 export function formatMonth(key: string): string {
   return MONTH.format(new Date(toUtcMs(`${key}-01`)));
 }
+
+/**
+ * Wall-clock time in an IANA zone → UTC instant. "2026-10-02T09:30" in
+ * America/Chicago → 2026-10-02T14:30:00Z. Handles DST by re-checking the offset.
+ */
+export function zonedLocalToUtc(local: string, timeZone: string = DEFAULT_TIMEZONE): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(local);
+  if (!m) throw new Error(`Invalid local date-time: ${local}`);
+  const [y, mo, d, h, mi] = m.slice(1).map(Number) as [number, number, number, number, number];
+  const wall = Date.UTC(y, mo - 1, d, h, mi);
+  const offsetAt = (ms: number) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).formatToParts(new Date(ms));
+    const get = (t: string) => Number(parts.find((p) => p.type === t)!.value);
+    return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute")) - ms;
+  };
+  let guess = wall - offsetAt(wall);
+  guess = wall - offsetAt(guess);
+  return new Date(guess);
+}
+
+/** UTC instant → "YYYY-MM-DDTHH:mm" wall-clock in a zone (for datetime-local inputs). */
+export function utcToZonedLocal(instant: Date, timeZone: string = DEFAULT_TIMEZONE): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).formatToParts(instant);
+  const get = (t: string) => parts.find((p) => p.type === t)!.value;
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}

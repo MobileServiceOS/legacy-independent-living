@@ -8,8 +8,9 @@ import { logoutAction } from "@/app/actions/auth";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePagePermission("admin:access");
-  const [newApps, unread, demo] = await Promise.all([
+  const [newApps, newRepairs, unread, demo] = await Promise.all([
     prisma.application.count({ where: { status: "NEW" } }),
+    prisma.maintenanceRequest.count({ where: { status: "SUBMITTED" } }),
     unreadCount(user.id),
     prisma.property.count({ where: { isDemo: true } }),
   ]);
@@ -18,6 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/properties", label: "Properties", icon: "building" },
     { href: "/admin/residents", label: "Residents", icon: "users" },
     { href: "/admin/applications", label: "Applications", icon: "inbox", badge: newApps },
+    { href: "/admin/maintenance", label: "Maintenance", icon: "wrench", badge: newRepairs },
     { href: "/admin/payments", label: "Payments", icon: "dollar" },
     { href: "/admin/reports", label: "Reports", icon: "chart" },
     { href: "/admin/notifications", label: "Notifications", icon: "bell", badge: unread },

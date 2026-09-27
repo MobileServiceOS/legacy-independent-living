@@ -106,3 +106,17 @@ Manifest with standard + maskable icons (generated from the brand mark), standal
 ## 9. Documents
 
 Stored outside `public/` (`STORAGE_DIR`) with random keys; type verified by magic bytes (PDF/JPEG/PNG/WEBP/HEIC), 10 MB max; served only through `/api/documents/[id]` after an ownership check, with a sandboxing CSP. The UI asks staff to record *what was verified* for IDs rather than ID numbers. Swap `LocalDiskStorage` for S3/R2/Supabase Storage via `StorageProvider`.
+
+## 10. Maintenance requests
+
+```
+Resident: Report a problem ──▶ SUBMITTED ──▶ ACKNOWLEDGED ──▶ SCHEDULED ──▶ IN_PROGRESS ──▶ COMPLETED
+          (photos, urgency,        │              │               │              │              │
+           OK-to-enter)            └──────────────┴───────────────┴──────────────┴──▶ CANCELED   └─▶ reopen (14 days)
+```
+
+- Tables: `maintenance_requests` (property/room captured at submission so history survives transfers), `maintenance_updates` (append-only timeline: comments + status changes, `internal` = staff-only), `maintenance_photos`.
+- DB rules: `completed_at`/`canceled_at` must match status, SCHEDULED needs a visit time, only staff can write internal notes, timeline can't be edited, nothing is hard-deleted.
+- Residents: submit (active residents only, 3 photos max, images verified by magic bytes), message, cancel before work starts, reopen within 14 days. Only their own requests/photos are reachable (404 otherwise); staff-only notes are never queried for residents.
+- Staff: queue sorted urgent → oldest; status/priority/visit time (entered in business time, stored UTC)/assignee/notes/photos in one update. Every change is audited; residents are notified of anything they can see; admins are notified of new requests (URGENT flagged), resident messages, cancels and reopens.
+- Routes: `/maintenance`, `/maintenance/new`, `/maintenance/[id]`, `/admin/maintenance`, `/admin/maintenance/[id]`, `GET /api/maintenance-photos/[id]`.

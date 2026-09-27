@@ -58,4 +58,5 @@ g.__lilLimiters ??= {
   invite: createRateLimiter({ limit: 10, windowMs: 15 * 60_000 }),
   pay: createRateLimiter({ limit: 20, windowMs: 15 * 60_000 }),
 };
-export const limiters = g.__lilLimiters as Record<"login" | "apply" | "invite" | "pay", RateLimiter>;
+g.__lilLimiters.maintenance ??= createRateLimiter({ limit: 10, windowMs: 15 * 60_000 });
+export const limiters = g.__lilLimiters as Record<"login" | "apply" | "invite" | "pay" | "maintenance", RateLimiter>;

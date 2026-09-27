@@ -139,6 +139,31 @@ describe("residents + audit", () => {
   });
 });
 
+describe("maintenance requests", () => {
+  test("setup", () => {
+    run(`INSERT INTO maintenance_requests (id,resident_id,category,title,description,updated_at) VALUES ('m1','r1','PLUMBING','Leak','Sink drips',now())`);
+    assert.equal(run(`SELECT status || ':' || priority FROM maintenance_requests WHERE id='m1'`), "SUBMITTED:NORMAL");
+    assert.ok(Number(run(`SELECT number FROM maintenance_requests WHERE id='m1'`)) > 0);
+  });
+  test("blank title/description rejected", () =>
+    rejects(`INSERT INTO maintenance_requests (id,resident_id,category,title,description,updated_at) VALUES ('m2','r1','GENERAL','  ','x',now())`, /text_present/));
+  test("completed_at must match COMPLETED status", () => {
+    rejects(`UPDATE maintenance_requests SET status='COMPLETED' WHERE id='m1'`, /completed_at/);
+    run(`UPDATE maintenance_requests SET status='COMPLETED', completed_at=now() WHERE id='m1'`);
+    rejects(`UPDATE maintenance_requests SET status='ACKNOWLEDGED' WHERE id='m1'`, /completed_at/);
+  });
+  test("SCHEDULED requires a visit time", () =>
+    rejects(`UPDATE maintenance_requests SET status='SCHEDULED', completed_at=NULL WHERE id='m1'`, /scheduled_has_date/));
+  test("timeline is append-only; staff-only notes must be written by staff", () => {
+    run(`INSERT INTO maintenance_updates (id,request_id,author_name,author_role,body) VALUES ('mu1','m1','Ann','RESIDENT','hello')`);
+    rejects(`UPDATE maintenance_updates SET body='edited' WHERE id='mu1'`, /append-only/);
+    rejects(`DELETE FROM maintenance_updates WHERE id='mu1'`, /append-only/);
+    rejects(`INSERT INTO maintenance_updates (id,request_id,author_name,author_role,body,internal) VALUES ('mu2','m1','Ann','RESIDENT','x',true)`, /internal_staff_only/);
+    rejects(`INSERT INTO maintenance_updates (id,request_id,author_name,author_role) VALUES ('mu3','m1','Ann','RESIDENT')`, /has_content/);
+  });
+  test("requests are never hard-deleted", () => rejects(`DELETE FROM maintenance_requests WHERE id='m1'`, /cannot be deleted/));
+});
+
 describe("schema drift checker", () => {
   test("passes on the migrated database", () => {
     const r = spawnSync("node", [join(import.meta.dirname, "../../scripts/check-schema-drift.mjs")], {

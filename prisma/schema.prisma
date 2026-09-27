@@ -102,6 +102,34 @@ enum NotificationType {
   APPLICATION_STATUS
   ANNOUNCEMENT
   ACCOUNT
+  MAINTENANCE_SUBMITTED
+  MAINTENANCE_UPDATE
+}
+
+enum MaintenanceStatus {
+  SUBMITTED
+  ACKNOWLEDGED
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  HEATING_COOLING
+  APPLIANCE
+  DOORS_LOCKS
+  PESTS
+  SAFETY
+  GENERAL
+}
+
+enum MaintenancePriority {
+  LOW
+  NORMAL
+  URGENT
 }
 
 enum NotificationChannel {
@@ -184,6 +212,7 @@ model Property {
 
   rooms         Room[]
   announcements Announcement[]
+  maintenance   MaintenanceRequest[]
 
   @@map("properties")
 }
@@ -199,8 +228,9 @@ model Room {
   createdAt        DateTime   @default(now()) @map("created_at")
   updatedAt        DateTime   @updatedAt @map("updated_at")
 
-  property    Property         @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  property    Property             @relation(fields: [propertyId], references: [id], onDelete: Restrict)
   assignments RoomAssignment[]
+  maintenance MaintenanceRequest[]
 
   @@unique([propertyId, name])
   @@map("rooms")
@@ -233,6 +263,7 @@ model Resident {
   payments       Payment[]
   paymentMethods PaymentMethod[]
   documents      Document[]
+  maintenance    MaintenanceRequest[]
 
   @@index([status])
   @@index([lastName, firstName])
@@ -481,6 +512,76 @@ model AuditLog {
   @@index([createdAt])
   @@index([actorId])
   @@map("audit_logs")
+}
+
+/// A resident-reported repair. Property/room are captured at submission so
+/// the record stays correct after transfers or move-out.
+model MaintenanceRequest {
+  id                String              @id @default(cuid())
+  number            Int                 @unique @default(autoincrement())
+  residentId        String              @map("resident_id")
+  propertyId        String?             @map("property_id")
+  roomId            String?             @map("room_id")
+  category          MaintenanceCategory
+  priority          MaintenancePriority @default(NORMAL)
+  title             String
+  description       String
+  location          String?
+  permissionToEnter Boolean             @default(false) @map("permission_to_enter")
+  entryNotes        String?             @map("entry_notes")
+  status            MaintenanceStatus   @default(SUBMITTED)
+  scheduledFor      DateTime?           @map("scheduled_for")
+  assignedTo        String?             @map("assigned_to")
+  completedAt       DateTime?           @map("completed_at")
+  canceledAt        DateTime?           @map("canceled_at")
+  isDemo            Boolean             @default(false) @map("is_demo")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+
+  resident Resident             @relation(fields: [residentId], references: [id], onDelete: Restrict)
+  property Property?            @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  room     Room?                @relation(fields: [roomId], references: [id], onDelete: Restrict)
+  updates  MaintenanceUpdate[]
+  photos   MaintenancePhoto[]
+
+  @@index([status, priority, createdAt])
+  @@index([residentId, createdAt])
+  @@index([propertyId])
+  @@map("maintenance_requests")
+}
+
+/// Timeline entry: a comment and/or a status change. Internal notes are staff-only.
+model MaintenanceUpdate {
+  id         String             @id @default(cuid())
+  requestId  String             @map("request_id")
+  authorId   String?            @map("author_id")
+  authorName String             @map("author_name")
+  authorRole Role               @map("author_role")
+  body       String?
+  fromStatus MaintenanceStatus? @map("from_status")
+  toStatus   MaintenanceStatus? @map("to_status")
+  internal   Boolean            @default(false)
+  createdAt  DateTime           @default(now()) @map("created_at")
+
+  request MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@index([requestId, createdAt])
+  @@map("maintenance_updates")
+}
+
+model MaintenancePhoto {
+  id         String   @id @default(cuid())
+  requestId  String   @map("request_id")
+  storageKey String   @unique @map("storage_key")
+  mimeType   String   @map("mime_type")
+  sizeBytes  Int      @map("size_bytes")
+  uploadedBy String?  @map("uploaded_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  request MaintenanceRequest @relation(fields: [requestId], references: [id], onDelete: Restrict)
+
+  @@index([requestId])
+  @@map("maintenance_photos")
 }
 
 /// Singleton row (id = 1) — business rules the owner can tune.

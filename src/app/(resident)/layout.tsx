@@ -2,16 +2,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { ResidentTabBar, TopNav, type NavItem } from "@/components/nav";
 import { requireResidentPage } from "@/lib/auth/session";
+import { prisma } from "@/lib/db";
 import { unreadCount } from "@/server/notifications";
 import { logoutAction } from "@/app/actions/auth";
 
 export default async function ResidentLayout({ children }: { children: React.ReactNode }) {
   const user = await requireResidentPage();
-  const unread = await unreadCount(user.id);
+  const [unread, openRepairs] = await Promise.all([
+    unreadCount(user.id),
+    prisma.maintenanceRequest.count({ where: { residentId: user.residentId, status: { notIn: ["COMPLETED", "CANCELED"] } } }),
+  ]);
   const items: NavItem[] = [
     { href: "/home", label: "Home", icon: "home" },
     { href: "/payments", label: "Payments", icon: "receipt" },
-    { href: "/documents", label: "Documents", icon: "file" },
+    { href: "/maintenance", label: "Repairs", icon: "wrench", badge: openRepairs || undefined },
+    { href: "/documents", label: "Documents", icon: "file", desktopOnly: true },
     { href: "/notifications", label: "Alerts", icon: "bell", badge: unread },
     { href: "/profile", label: "Profile", icon: "user" },
   ];

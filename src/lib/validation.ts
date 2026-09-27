@@ -4,6 +4,7 @@ import { parseDollarsToCents } from "../domain/money";
 import { isDateOnly } from "../domain/dates";
 import { HOUSING_SITUATIONS, CONTACT_PREFERENCES, APPLICATION_STATUSES } from "../domain/applications";
 import { MANUAL_ROOM_STATUSES } from "../domain/rooms";
+import { MAINTENANCE_CATEGORIES, MAINTENANCE_PRIORITIES, MAINTENANCE_STATUSES } from "../domain/maintenance";
 
 const trimmed = (max = 200) => z.string().trim().max(max);
 const required = (label: string, max = 200) => trimmed(max).min(1, `${label} is required`);
@@ -267,6 +268,39 @@ export const announcementSchema = z.object({
     .optional()
     .transform((v) => (v ? v : null)),
 });
+
+// ---------------------------------------------------------------- maintenance
+export const maintenanceRequestSchema = z.object({
+  category: z.enum(MAINTENANCE_CATEGORIES, { errorMap: () => ({ message: "Choose what kind of problem it is" }) }),
+  priority: z.enum(MAINTENANCE_PRIORITIES).default("NORMAL"),
+  title: required("A short summary", 120),
+  description: required("Description", 4000),
+  location: optional(120),
+  permissionToEnter: checkbox,
+  entryNotes: optional(500),
+});
+
+export const maintenanceCommentSchema = z.object({
+  requestId: id,
+  body: required("Message", 4000),
+});
+
+export const maintenanceStaffUpdateSchema = z
+  .object({
+    requestId: id,
+    status: z.enum(MAINTENANCE_STATUSES),
+    priority: z.enum(MAINTENANCE_PRIORITIES),
+    scheduledFor: z
+      .string()
+      .trim()
+      .optional()
+      .transform((v) => (v ? v : null))
+      .refine((v) => v === null || /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v), "Enter a date and time"),
+    assignedTo: optional(120),
+    body: optional(4000),
+    internal: checkbox,
+  })
+  .refine((v) => v.status !== "SCHEDULED" || v.scheduledFor !== null, { path: ["scheduledFor"], message: "Pick the visit date and time" });
 
 // ---------------------------------------------------------------- helpers
 export type FieldErrors = Record<string, string>;

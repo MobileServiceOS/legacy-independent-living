@@ -33,6 +33,7 @@ type Mods = {
   auth: typeof import("../../src/server/auth");
   queries: typeof import("../../src/server/queries");
   props: typeof import("../../src/server/properties");
+  maint: typeof import("../../src/server/maintenance");
 };
 let m: Mods;
 let actor: { id: string; email: string; role: "ADMIN" };
@@ -56,6 +57,7 @@ before(async () => {
     auth: await import("../../src/server/auth"),
     queries: await import("../../src/server/queries"),
     props: await import("../../src/server/properties"),
+    maint: await import("../../src/server/maintenance"),
   };
   const { hashPassword } = await import("../../src/lib/security/crypto");
   const admin = await m.prisma.user.create({
@@ -349,5 +351,131 @@ describe("rent engine, transfers, rent changes, move-out", () => {
     await assert.rejects(m.props.setRoomStatus(actor, rooms.r3!, "MAINTENANCE"), /Move the resident out/);
     await m.props.setRoomStatus(actor, rooms.r5!, "MAINTENANCE");
     assert.equal((await m.prisma.room.findUniqueOrThrow({ where: { id: rooms.r5! } })).status, "MAINTENANCE");
+  });
+});
+
+describe("maintenance requests: resident ↔ office", () => {
+  const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
+  let resident: { id: string; name: string; email: string; residentId: string };
+  let other: { id: string; name: string; email: string; residentId: string };
+  let admin: { id: string; email: string; role: "ADMIN"; name: string };
+  let requestId = "";
+
+  before(async () => {
+    admin = { ...actor, name: "Owner" };
+    const r = await m.prisma.resident.findFirstOrThrow({ where: { email: "casey@test.local" }, include: { user: true } });
+    resident = { id: r.userId!, name: r.user!.name, email: r.email, residentId: r.id };
+    const o = await m.prisma.resident.findFirstOrThrow({ where: { email: "pat@test.local" }, include: { user: true } });
+    other = { id: o.userId!, name: o.user!.name, email: o.email, residentId: o.id };
+  });
+
+  test("resident submits with a photo; room captured; admins notified; audited", async () => {
+    const photo = new File([PNG], "leak.png", { type: "image/png" });
+    const req = await m.maint.submitMaintenanceRequest(
+      resident,
+      { category: "PLUMBING", priority: "URGENT", title: "Sink leaking", description: "Water under the sink", location: "My room", permissionToEnter: true, entryNotes: "Knock first" },
+      [photo],
+    );
+    requestId = req.id;
+    assert.equal(req.status, "SUBMITTED");
+    assert.equal(req.roomId, rooms.r3);
+    assert.equal(req.propertyId, house1);
+    assert.equal(await m.prisma.maintenancePhoto.count({ where: { requestId } }), 1);
+    const n = await m.prisma.notification.findFirstOrThrow({ where: { userId: actor.id, type: "MAINTENANCE_SUBMITTED" } });
+    assert.match(n.title, /URGENT repair MR-\d+/);
+    assert.ok(await m.prisma.auditLog.findFirst({ where: { action: "maintenance.submitted", entityId: requestId } }));
+  });
+
+  test("non-image uploads and too many photos are rejected, nothing is saved", async () => {
+    const before = await m.prisma.maintenanceRequest.count();
+    const exe = new File([new Uint8Array([0x4d, 0x5a, 0, 0])], "virus.png", { type: "image/png" });
+    await assert.rejects(
+      m.maint.submitMaintenanceRequest(resident, { category: "GENERAL", priority: "LOW", title: "x", description: "y", location: null, permissionToEnter: false, entryNotes: null }, [exe]),
+      /JPG, PNG/,
+    );
+    const four = Array.from({ length: 4 }, (_, i) => new File([PNG], `p${i}.png`));
+    await assert.rejects(
+      m.maint.submitMaintenanceRequest(resident, { category: "GENERAL", priority: "LOW", title: "x", description: "y", location: null, permissionToEnter: false, entryNotes: null }, four),
+      /up to 3/,
+    );
+    assert.equal(await m.prisma.maintenanceRequest.count(), before);
+  });
+
+  test("another resident can't see, comment on, or cancel it", async () => {
+    assert.equal(await m.maint.getResidentRequest(other.residentId, requestId), null);
+    await assert.rejects(m.maint.residentComment(other, requestId, "hi"), /not found/);
+    await assert.rejects(m.maint.residentCancel(other, requestId, null), /not found/);
+    const photo = await m.prisma.maintenancePhoto.findFirstOrThrow({ where: { requestId } });
+    assert.equal(await m.maint.getPhotoForViewer(photo.id, { role: "RESIDENT", residentId: other.residentId }), null);
+    assert.ok(await m.maint.getPhotoForViewer(photo.id, { role: "RESIDENT", residentId: resident.residentId }));
+    assert.ok(await m.maint.getPhotoForViewer(photo.id, { role: "ADMIN", residentId: null }));
+  });
+
+  test("staff schedules a visit (business timezone) → resident notified", async () => {
+    await m.maint.staffUpdate(admin, { requestId, status: "SCHEDULED", priority: "URGENT", scheduledFor: "2026-09-28T09:30", assignedTo: "Mike (handyman)", body: "Mike will come by tomorrow morning.", internal: false });
+    const req = await m.prisma.maintenanceRequest.findUniqueOrThrow({ where: { id: requestId } });
+    assert.equal(req.status, "SCHEDULED");
+    assert.equal(req.scheduledFor!.toISOString(), "2026-09-28T14:30:00.000Z");
+    const n = await m.prisma.notification.findFirstOrThrow({ where: { userId: resident.id, type: "MAINTENANCE_UPDATE" }, orderBy: { createdAt: "desc" } });
+    assert.match(n.body, /Visit scheduled for Mon, Sep 28, 9:30/);
+  });
+
+  test("staff-only notes stay hidden from the resident and don't notify them", async () => {
+    const before = await m.prisma.notification.count({ where: { userId: resident.id } });
+    await m.maint.staffUpdate(admin, { requestId, status: "SCHEDULED", priority: "URGENT", scheduledFor: "2026-09-28T09:30", assignedTo: "Mike (handyman)", body: "Parts cost $40, bill to house", internal: true });
+    assert.equal(await m.prisma.notification.count({ where: { userId: resident.id } }), before);
+    const view = await m.maint.getResidentRequest(resident.residentId, requestId);
+    assert.ok(view!.updates.every((u) => !u.internal && !(u.body ?? "").includes("$40")));
+    const staff = await m.maint.getMaintenanceForStaff(requestId);
+    assert.ok(staff!.updates.some((u) => u.internal));
+  });
+
+  test("resident can't cancel once scheduled; can message; office notified", async () => {
+    await assert.rejects(m.maint.residentCancel(resident, requestId, null), /already underway/);
+    await m.maint.residentComment(resident, requestId, "I'll be home after 9");
+    assert.ok(await m.prisma.notification.findFirst({ where: { userId: actor.id, type: "MAINTENANCE_UPDATE", body: { contains: "home after 9" } } }));
+  });
+
+  test("illegal jumps and empty updates are refused", async () => {
+    await assert.rejects(
+      m.maint.staffUpdate(admin, { requestId, status: "SUBMITTED", priority: "URGENT", scheduledFor: "2026-09-28T09:30", assignedTo: "Mike (handyman)", body: null, internal: false }),
+      /Can't move/,
+    );
+    await assert.rejects(
+      m.maint.staffUpdate(admin, { requestId, status: "SCHEDULED", priority: "URGENT", scheduledFor: "2026-09-28T09:30", assignedTo: "Mike (handyman)", body: null, internal: false }),
+      /Nothing changed/,
+    );
+  });
+
+  test("complete → resident reopens → office sees it again", async () => {
+    await m.maint.staffUpdate(admin, { requestId, status: "COMPLETED", priority: "URGENT", scheduledFor: "2026-09-28T09:30", assignedTo: "Mike (handyman)", body: "Replaced the trap.", internal: false });
+    let req = await m.prisma.maintenanceRequest.findUniqueOrThrow({ where: { id: requestId } });
+    assert.ok(req.completedAt);
+    await m.maint.residentReopen(resident, requestId, "Still dripping a bit");
+    req = await m.prisma.maintenanceRequest.findUniqueOrThrow({ where: { id: requestId } });
+    assert.equal(req.status, "ACKNOWLEDGED");
+    assert.equal(req.completedAt, null);
+    const q = await m.maint.listMaintenance({ status: "OPEN" });
+    assert.equal(q[0]!.id, requestId, "urgent open request is first in the queue");
+  });
+
+  test("resident cancels a fresh request", async () => {
+    const r2 = await m.maint.submitMaintenanceRequest(resident, { category: "PESTS", priority: "LOW", title: "Ants", description: "In kitchen", location: null, permissionToEnter: false, entryNotes: null });
+    await m.maint.residentCancel(resident, r2.id, "Gone now");
+    const got = await m.prisma.maintenanceRequest.findUniqueOrThrow({ where: { id: r2.id } });
+    assert.equal(got.status, "CANCELED");
+    assert.ok(got.canceledAt);
+    await assert.rejects(m.maint.residentComment(resident, r2.id, "back"), /canceled/);
+    const counts = await m.maint.maintenanceCounts();
+    assert.equal(counts.open, 1);
+    assert.equal(counts.urgent, 1);
+  });
+
+  test("moved-out residents can't submit new requests", async () => {
+    const jo = await m.prisma.resident.findFirstOrThrow({ where: { email: "jo@test.local" }, include: { user: true } });
+    await assert.rejects(
+      m.maint.submitMaintenanceRequest({ id: jo.userId!, name: "Jo", email: jo.email, residentId: jo.id }, { category: "GENERAL", priority: "LOW", title: "x", description: "y", location: null, permissionToEnter: false, entryNotes: null }),
+      /current residents/,
+    );
   });
 });

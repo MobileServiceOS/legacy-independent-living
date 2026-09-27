@@ -6,6 +6,12 @@ import { formatCents } from "@/domain/money";
 import { PAYMENT_STATUS_LABELS, type PaymentStatus } from "@/domain/payments";
 import { RENT_STATUS_LABELS, type RentStatus } from "@/domain/rent";
 import { ROOM_STATUS_LABELS, type RoomStatus } from "@/domain/rooms";
+import {
+  MAINTENANCE_PRIORITY_SHORT,
+  MAINTENANCE_STATUS_LABELS,
+  type MaintenancePriority,
+  type MaintenanceStatus,
+} from "@/domain/maintenance";
 import { Icon, type IconName } from "./icons";
 
 export function cx(...parts: Array<string | false | null | undefined>) {
@@ -86,6 +92,33 @@ const APP_TONE: Record<ApplicationStatus, Tone> = {
 
 export function ApplicationStatusBadge({ status }: { status: ApplicationStatus }) {
   return <Badge tone={APP_TONE[status]}>{APPLICATION_STATUS_LABELS[status]}</Badge>;
+}
+
+const MAINT_TONE: Record<MaintenanceStatus, { tone: Tone; icon: IconName }> = {
+  SUBMITTED: { tone: "info", icon: "inbox" },
+  ACKNOWLEDGED: { tone: "partial", icon: "check" },
+  SCHEDULED: { tone: "warn", icon: "clock" },
+  IN_PROGRESS: { tone: "warn", icon: "wrench" },
+  COMPLETED: { tone: "ok", icon: "check" },
+  CANCELED: { tone: "neutral", icon: "x" },
+};
+
+export function MaintenanceStatusBadge({ status, size }: { status: MaintenanceStatus; size?: "md" | "lg" }) {
+  const t = MAINT_TONE[status];
+  return (
+    <Badge tone={t.tone} icon={t.icon} size={size}>
+      {MAINTENANCE_STATUS_LABELS[status]}
+    </Badge>
+  );
+}
+
+export function PriorityBadge({ priority }: { priority: MaintenancePriority }) {
+  if (priority === "NORMAL") return <Badge tone="neutral">{MAINTENANCE_PRIORITY_SHORT[priority]}</Badge>;
+  return (
+    <Badge tone={priority === "URGENT" ? "bad" : "neutral"} icon={priority === "URGENT" ? "alert" : undefined}>
+      {MAINTENANCE_PRIORITY_SHORT[priority]}
+    </Badge>
+  );
 }
 
 export function DemoTag() {

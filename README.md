@@ -4,6 +4,7 @@ An installable PWA that runs Legacy Independent Living day to day:
 **applicant → review → approval → room assignment → resident account → rent charges → payment → receipt → owner dashboard.**
 
 - **Residents** (mobile-first, big type, big buttons): current balance, due date, one **Pay rent** button, payment history with receipts, documents, notices.
+- **Repairs**: residents report a problem (type, urgency, photos, OK-to-enter), follow its status, get notified when it's scheduled, message the office, cancel or reopen. The owner gets a prioritized maintenance queue with scheduling, assignee, resident-visible and staff-only notes.
 - **Owner/Admin**: occupancy + rent-collection dashboard, properties → rooms → residents, application pipeline, payments (online + cash/money order), auditable ledgers, reports, announcements, settings, audit log.
 
 > Branding (olive/forest palette, Cormorant Garamond + Mulish, tree-and-family mark) comes from

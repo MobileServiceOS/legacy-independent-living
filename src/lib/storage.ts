@@ -22,6 +22,7 @@ export const ALLOWED_UPLOAD_TYPES: Record<string, string> = {
   "image/heic": "heic",
 };
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+export const IMAGE_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"] as const;
 
 const KEY_RE = /^[0-9a-f-]{36}\.[a-z0-9]{2,5}$/;
 

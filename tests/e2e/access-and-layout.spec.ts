@@ -57,7 +57,7 @@ test("resident sees only their own world", async ({ page }) => {
   await page.goto("/admin");
   await expect(page).toHaveURL(/\/home$/);
 
-  for (const path of ["/payments", "/documents", "/notifications", "/profile"]) {
+  for (const path of ["/payments", "/documents", "/notifications", "/profile", "/maintenance", "/maintenance/new"]) {
     await page.goto(path);
     await expectNoHorizontalScroll(page);
   }
@@ -82,7 +82,7 @@ test("receipts are private to their resident", async ({ browser }) => {
 
 test("admin screens fit the viewport", async ({ page }) => {
   await signIn(page, ADMIN);
-  for (const path of ["/admin", "/admin/properties", "/admin/residents", "/admin/applications", "/admin/payments", "/admin/reports", "/admin/settings"]) {
+  for (const path of ["/admin", "/admin/properties", "/admin/residents", "/admin/applications", "/admin/payments", "/admin/reports", "/admin/settings", "/admin/maintenance"]) {
     await page.goto(path);
     await expect(page.locator("h1")).toBeVisible();
     await expectNoHorizontalScroll(page);

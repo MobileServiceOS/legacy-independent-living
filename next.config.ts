@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
       { source: "/:path*", headers: securityHeaders },
       { source: "/sw.js", headers: [{ key: "Cache-Control", value: "no-cache, no-store, must-revalidate" }, { key: "Service-Worker-Allowed", value: "/" }] },
       // Authenticated pages must never be cached by shared caches.
-      { source: "/(admin|home|pay|payments|documents|notifications|profile|receipts)/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }] },
+      { source: "/(admin|home|pay|payments|documents|notifications|profile|receipts|maintenance)/:path*", headers: [{ key: "Cache-Control", value: "private, no-store" }] },
     ];
   },
 };

@@ -9,6 +9,8 @@ export interface NavItem {
   icon: IconName;
   badge?: number;
   exact?: boolean;
+  /** Hide from the phone tab bar (still in the desktop nav). */
+  desktopOnly?: boolean;
 }
 
 function isActive(pathname: string, item: NavItem) {
@@ -21,7 +23,7 @@ export function ResidentTabBar({ items }: { items: NavItem[] }) {
   return (
     <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
       <ul className="grid grid-cols-5">
-        {items.map((item) => {
+        {items.filter((i) => !i.desktopOnly).map((item) => {
           const active = isActive(pathname, item);
           return (
             <li key={item.href}>

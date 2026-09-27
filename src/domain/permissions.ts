@@ -28,8 +28,11 @@ export const PERMISSIONS = [
   "notifications:broadcast",
   "settings:write",
   "audit:read",
+  "maintenance:read",
+  "maintenance:write",
   "self:read",
   "self:pay",
+  "self:maintenance",
 ] as const;
 export type Permission = (typeof PERMISSIONS)[number];
 
@@ -37,7 +40,7 @@ const ADMIN_PERMISSIONS: readonly Permission[] = PERMISSIONS.filter((p) => !p.st
 
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   ADMIN: ADMIN_PERMISSIONS,
-  RESIDENT: ["self:read", "self:pay"],
+  RESIDENT: ["self:read", "self:pay", "self:maintenance"],
 };
 
 export function isRole(value: unknown): value is Role {

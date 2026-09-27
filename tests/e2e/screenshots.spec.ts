@@ -38,6 +38,14 @@ test("capture", async ({ page }, info) => {
   await shot(page, "13-receipt", p);
   await page.context().clearCookies();
 
+  await page.goto("/maintenance");
+  await shot(page, "15-resident-repairs", p);
+  await page.getByRole("link", { name: "Bathroom sink is leaking" }).click();
+  await shot(page, "16-resident-repair-detail", p);
+  await page.goto("/maintenance/new");
+  await shot(page, "17-resident-report-problem", p);
+  await page.context().clearCookies();
+
   await signIn(page, "denise.carter@legacy.demo", "ResidentDemo2026!");
   await shot(page, "14-resident-home-overdue", p, false);
   await page.context().clearCookies();
@@ -57,4 +65,8 @@ test("capture", async ({ page }, info) => {
   await shot(page, "25-admin-payments", p);
   await page.goto("/admin/reports");
   await shot(page, "26-admin-reports", p);
+  await page.goto("/admin/maintenance");
+  await shot(page, "27-admin-maintenance", p);
+  await page.getByRole("link", { name: "Bathroom sink is leaking" }).click();
+  await shot(page, "28-admin-maintenance-detail", p);
 });

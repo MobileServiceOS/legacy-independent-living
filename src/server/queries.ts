@@ -175,6 +175,7 @@ export async function residentProfile(id: string, today: DateOnly) {
       ledgerEntries: { orderBy: [{ effectiveDate: "asc" }, { createdAt: "asc" }] },
       payments: { orderBy: { createdAt: "desc" } },
       documents: { where: { archivedAt: null }, orderBy: { createdAt: "desc" } },
+      maintenance: { orderBy: { createdAt: "desc" }, take: 10 },
     },
   });
   if (!resident) return null;

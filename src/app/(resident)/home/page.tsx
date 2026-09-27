@@ -20,7 +20,7 @@ export default async function ResidentHome() {
   await ensureRentEngineCurrent();
   const settings = await getSettings();
   const today = businessToday(settings);
-  const [fin, resident, lastPayment, notices] = await Promise.all([
+  const [fin, resident, lastPayment, notices, openRepairs] = await Promise.all([
     residentFinancials(prisma, user.residentId, today),
     prisma.resident.findUniqueOrThrow({
       where: { id: user.residentId },
@@ -28,6 +28,7 @@ export default async function ResidentHome() {
     }),
     prisma.payment.findFirst({ where: { residentId: user.residentId, status: { in: ["SUCCEEDED", "PROCESSING"] } }, orderBy: { createdAt: "desc" } }),
     prisma.notification.findMany({ where: { userId: user.id, readAt: null }, orderBy: { createdAt: "desc" }, take: 3 }),
+    prisma.maintenanceRequest.count({ where: { residentId: user.residentId, status: { notIn: ["COMPLETED", "CANCELED"] } } }),
   ]);
   const { position, schedule } = fin;
   const assignment = resident.assignments[0];
@@ -131,6 +132,21 @@ export default async function ResidentHome() {
           )}
         </Card>
       </div>
+
+      <Link href="/maintenance/new" className="card flex min-h-16 items-center justify-between gap-3 px-5 py-4 text-ink no-underline hover:bg-paper-2">
+        <span className="flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-full bg-ok-bg text-forest">
+            <Icon name="wrench" className="size-6" />
+          </span>
+          <span>
+            <span className="block text-lg font-bold">Something need fixing?</span>
+            <span className="block text-muted">
+              {openRepairs ? `${openRepairs} open repair request${openRepairs > 1 ? "s" : ""} · ` : ""}Report a problem
+            </span>
+          </span>
+        </span>
+        <Icon name="arrowRight" />
+      </Link>
 
       <Card title="Notices" action={<Link href="/notifications" className="text-sm font-bold">See all</Link>}>
         {notices.length ? (

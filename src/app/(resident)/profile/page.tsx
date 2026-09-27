@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Icon } from "@/components/icons";
 import { Card, DefinitionList } from "@/components/ui";
 import { dateOnlyFromDbDate, formatLong } from "@/domain/dates";
 import { formatCents } from "@/domain/money";
@@ -49,6 +51,20 @@ export default async function ProfilePage() {
           ]}
         />
       </Card>
+      <nav aria-label="More" className="card divide-y divide-line">
+        <Link href="/documents" className="flex min-h-14 items-center justify-between px-5 font-bold no-underline">
+          <span className="flex items-center gap-3">
+            <Icon name="file" /> My documents
+          </span>
+          <Icon name="arrowRight" />
+        </Link>
+        <Link href="/maintenance" className="flex min-h-14 items-center justify-between px-5 font-bold no-underline">
+          <span className="flex items-center gap-3">
+            <Icon name="wrench" /> Repair requests
+          </span>
+          <Icon name="arrowRight" />
+        </Link>
+      </nav>
       <p className="text-center text-sm text-muted">
         Need to update something? Contact the office{settings.supportPhone ? ` at ${settings.supportPhone}` : ""}.
       </p>

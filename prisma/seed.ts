@@ -17,6 +17,7 @@ import { postLedgerEntry } from "../src/server/ledger";
 import { moveOutResident, placeResident } from "../src/server/residents";
 import { recordOfflinePayment } from "../src/server/payments";
 import { runRentEngine, runRentEngineForResident } from "../src/server/rent-engine";
+import { staffUpdate, submitMaintenanceRequest } from "../src/server/maintenance";
 
 const ADMIN_EMAIL = process.env.SEED_ADMIN_EMAIL ?? "owner@legacy.demo";
 const ADMIN_PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? "LegacyDemo2026!";
@@ -179,6 +180,42 @@ async function main() {
   for (const o of [-5, -4, -3, -2]) await paid(kevin, 70000, first(o, 1));
   await paid(kevin, 55000, first(-1, 4));
   await moveOutResident(actor, { residentId: kevin, moveOutDate: first(-1, 15), reason: "Moved in with family (demo)" });
+
+  // ------------------------------------------------------------ maintenance requests (demo)
+  const asResident = async (residentId: string) => {
+    const r = await prisma.resident.findUniqueOrThrow({ where: { id: residentId }, include: { user: true } });
+    return { id: r.userId!, name: r.user!.name, email: r.email, residentId };
+  };
+  const staff = { ...actor, name: "Demo Owner" };
+  const leak = await submitMaintenanceRequest(await asResident(angela), {
+    category: "PLUMBING",
+    priority: "URGENT",
+    title: "Bathroom sink is leaking",
+    description: "Water is pooling under the sink in the shared bathroom. I put a towel down.",
+    location: "Shared bathroom, 2nd floor",
+    permissionToEnter: true,
+    entryNotes: "Please knock first.",
+  });
+  await staffUpdate(staff, { requestId: leak.id, status: "SCHEDULED", priority: "URGENT", scheduledFor: `${addDays(today, 1)}T09:30`, assignedTo: "Handyman (demo)", body: "Thanks for letting us know — a handyman is coming tomorrow morning.", internal: false });
+  await submitMaintenanceRequest(await asResident(terrence), {
+    category: "HEATING_COOLING",
+    priority: "NORMAL",
+    title: "AC not cooling in my room",
+    description: "The air blows but it isn't cold, started two days ago.",
+    location: "My room",
+    permissionToEnter: false,
+    entryNotes: null,
+  });
+  const lock = await submitMaintenanceRequest(await asResident(marcus), {
+    category: "DOORS_LOCKS",
+    priority: "LOW",
+    title: "Front door lock sticks",
+    description: "Key is hard to turn in the front door lock.",
+    location: "Front door",
+    permissionToEnter: true,
+    entryNotes: null,
+  });
+  await staffUpdate(staff, { requestId: lock.id, status: "COMPLETED", priority: "LOW", scheduledFor: null, assignedTo: null, body: "Lubricated and adjusted the lock. Let us know if it sticks again.", internal: false });
 
   // ------------------------------------------------------------ applicants
   const apps = [

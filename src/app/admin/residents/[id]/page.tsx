@@ -12,6 +12,8 @@ import {
   Money,
   PageHeader,
   PaymentStatusBadge,
+  MaintenanceStatusBadge,
+  PriorityBadge,
   RentStatusBadge,
   RunningBalance,
   Stat,
@@ -242,6 +244,26 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
                   </tbody>
                 </table>
               </TableWrap>
+            )}
+          </Card>
+
+          <Card title="Repair requests" action={<Link href={`/admin/maintenance?q=${encodeURIComponent(r.lastName)}&status=ALL`} className="text-sm font-bold">All</Link>}>
+            {r.maintenance.length === 0 ? (
+              <p className="text-muted">No repair requests.</p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {r.maintenance.map((m) => (
+                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                    <Link href={`/admin/maintenance/${m.id}`} className="font-bold">
+                      {m.title}
+                    </Link>
+                    <span className="flex items-center gap-2">
+                      {m.priority === "URGENT" ? <PriorityBadge priority="URGENT" /> : null}
+                      <MaintenanceStatusBadge status={m.status} />
+                    </span>
+                  </li>
+                ))}
+              </ul>
             )}
           </Card>
 
