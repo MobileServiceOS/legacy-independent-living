@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "src": "/screenshots/pwa-narrow-01-home.png",
+    "sizes": "1080x2340",
+    "type": "image/png",
+    "form_factor": "narrow",
+    "label": "Your rent, always clear"
+  },
+  {
+    "src": "/screenshots/pwa-narrow-02-pay.png",
+    "sizes": "1080x2340",
+    "type": "image/png",
+    "form_factor": "narrow",
+    "label": "Pay rent in seconds"
+  },
+  {
+    "src": "/screenshots/pwa-narrow-03-repair-status.png",
+    "sizes": "1080x2340",
+    "type": "image/png",
+    "form_factor": "narrow",
+    "label": "Know when help is coming"
+  },
+  {
+    "src": "/screenshots/pwa-wide-01-owner-dashboard.png",
+    "sizes": "1920x1080",
+    "type": "image/png",
+    "form_factor": "wide",
+    "label": "Every home at a glance"
+  },
+  {
+    "src": "/screenshots/pwa-wide-02-owner-properties.png",
+    "sizes": "1920x1080",
+    "type": "image/png",
+    "form_factor": "wide",
+    "label": "Every room, every resident"
+  },
+  {
+    "src": "/screenshots/pwa-wide-03-owner-maintenance.png",
+    "sizes": "1920x1080",
+    "type": "image/png",
+    "form_factor": "wide",
+    "label": "Repairs, triaged and tracked"
+  }
+]
