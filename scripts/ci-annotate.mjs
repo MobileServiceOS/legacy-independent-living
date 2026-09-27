@@ -8,7 +8,6 @@ import { readFileSync, existsSync } from "node:fs";
 import { basename } from "node:path";
 
 const escape = (s) => s.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
-// eslint-disable-next-line no-control-regex
 const stripAnsi = (s) => s.replace(/\u001b\[[0-9;]*m/g, "");
 
 for (const file of process.argv.slice(2)) {

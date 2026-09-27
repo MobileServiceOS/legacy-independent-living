@@ -32,7 +32,7 @@ export default async function MaintenanceDetailPage({ params, searchParams }: { 
       <BackLink href="/maintenance">Repairs</BackLink>
       {submitted ? (
         <Notice tone="ok" title="Request sent">
-          The office has been notified. You'll get an alert here when there's an update.
+          The office has been notified. You’ll get an alert here when there’s an update.
         </Notice>
       ) : null}
       <div>
