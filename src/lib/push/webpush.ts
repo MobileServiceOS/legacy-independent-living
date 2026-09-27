@@ -106,7 +106,7 @@ export async function sendWebPush(
       ...(opts.topic ? { Topic: opts.topic.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) } : {}),
       Authorization: `vapid t=${vapidJwt(target.endpoint, keys)}, k=${keys.publicKey}`,
     },
-    body,
+    body: new Uint8Array(body),
   });
   if (res.status >= 200 && res.status < 300) return { ok: true };
   const reason = (await res.text().catch(() => "")).slice(0, 200) || res.statusText;
