@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { ActionForm, Input, Select, SubmitButton, Textarea } from "@/components/form";
 import { NotificationList } from "@/components/notification-list";
+import { PushSettings } from "@/components/push-controls";
+import { vapidConfig } from "@/lib/push";
 import { Card, PageHeader } from "@/components/ui";
 import { requirePagePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
@@ -25,6 +27,8 @@ export default async function AdminNotificationsPage() {
         <Card title="Your inbox">
           <NotificationList items={items} timeZone={settings.timezone} />
         </Card>
+        <div className="space-y-6">
+        <PushSettings vapidKey={vapidConfig()?.publicKey ?? null} />
         <Card title="Send an announcement">
           <ActionForm action={sendAnnouncementAction} className="space-y-4" resetOnSuccess>
             <Select name="propertyId" label="Send to" placeholder="All active residents" options={properties.map((p) => ({ value: p.id, label: `Residents of ${p.name}` }))} />
@@ -34,6 +38,7 @@ export default async function AdminNotificationsPage() {
             <SubmitButton>Send announcement</SubmitButton>
           </ActionForm>
         </Card>
+        </div>
       </div>
     </>
   );

@@ -7,6 +7,8 @@ import { limiters } from "@/lib/security/rate-limit";
 import { onlinePaymentSchema } from "@/lib/validation";
 import { ForbiddenError, UserError } from "@/server/errors";
 import { markRead } from "@/server/notifications";
+import { requestAccountDeletion } from "@/server/residents";
+import { businessToday, getSettings } from "@/lib/settings";
 import { completeSandboxPayment, startOnlinePayment } from "@/server/payments";
 
 export async function startPaymentAction(prev: ActionState, formData: FormData): Promise<ActionState> {
@@ -30,6 +32,18 @@ export async function sandboxOutcomeAction(prev: ActionState, formData: FormData
     await completeSandboxPayment(user, paymentId, outcome);
     revalidatePath("/home");
     return { redirectTo: outcome === "cancel" ? "/pay?canceled=1" : `/pay/return?payment=${encodeURIComponent(paymentId)}` };
+  });
+}
+
+export async function requestDeletionAction(prev: ActionState, formData: FormData): Promise<ActionState> {
+  const schema = z.object({
+    reason: z.string().trim().max(500).optional().transform((v) => (v ? v : null)),
+    confirm: z.literal("on", { errorMap: () => ({ message: "Please confirm" }) }),
+  });
+  return runAction(prev, formData, schema, async ({ reason }) => {
+    const user = await requireResidentAction();
+    const created = await requestAccountDeletion(user, reason, businessToday(await getSettings()));
+    return { message: created ? "Request sent. The office will contact you to confirm." : "You've already sent a request today — the office will be in touch." };
   });
 }
 

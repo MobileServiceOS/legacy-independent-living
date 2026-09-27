@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ResidentTabBar, TopNav, type NavItem } from "@/components/nav";
+import { SignOutButton } from "@/components/push-controls";
 import { requireResidentPage } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { unreadCount } from "@/server/notifications";
@@ -22,18 +23,14 @@ export default async function ResidentLayout({ children }: { children: React.Rea
   ];
   return (
     <div className="min-h-dvh pb-24 md:pb-10">
-      <header className="no-print sticky top-0 z-20 border-b border-line bg-paper/95 backdrop-blur">
+      <header className="no-print sticky top-0 z-20 border-b border-line bg-paper/95 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-2.5">
           <Link href="/home" className="flex items-center gap-2.5 no-underline">
             <Image src="/brand/logo-mark.webp" alt="" width={40} height={40} className="rounded-full bg-white" />
             <span className="font-serif text-xl font-semibold text-forest-deep">Legacy Living</span>
           </Link>
           <TopNav items={items} />
-          <form action={logoutAction}>
-            <button className="btn-secondary btn-sm" type="submit">
-              Sign out
-            </button>
-          </form>
+          <SignOutButton action={logoutAction} className="btn-secondary btn-sm" />
         </div>
       </header>
       <main id="main" className="mx-auto max-w-3xl px-4 py-6">

@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { homePathFor } from "@/domain/permissions";
 import { runAction, type ActionState } from "@/lib/actions";
-import { clearSessionCookie, requestMeta, setSessionCookie } from "@/lib/auth/session";
+import { clearSessionCookie, getSessionUser, requestMeta, setSessionCookie } from "@/lib/auth/session";
+import { unregisterDevice } from "@/lib/push";
 import { limiters } from "@/lib/security/rate-limit";
 import { loginSchema, setPasswordSchema } from "@/lib/validation";
 import { acceptInvite, authenticate, createSession, revokeSession } from "@/server/auth";
@@ -35,7 +36,11 @@ export async function loginAction(prev: ActionState, formData: FormData): Promis
   });
 }
 
-export async function logoutAction(): Promise<void> {
+export async function logoutAction(formData?: FormData): Promise<void> {
+  // The browser tells us its push endpoint so this device stops getting this person's alerts.
+  const endpoint = formData?.get("pushEndpoint");
+  const user = await getSessionUser();
+  if (user && typeof endpoint === "string" && endpoint) await unregisterDevice(user.id, { endpoint }).catch(() => undefined);
   const token = await clearSessionCookie();
   await revokeSession(token);
   redirect("/login?signedOut=1");

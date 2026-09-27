@@ -107,6 +107,13 @@ Full details — schema, routes, auth model, payment architecture, rent engine, 
 - A payment only hits the ledger on **SUCCEEDED**; pending ACH shows as *Payment pending*; refunds post a `REFUND` entry.
 - Webhooks are signature-verified (raw body, 5-min tolerance, constant-time compare) and de-duplicated by event id.
 
+### Push notifications
+- Web Push (browsers + Home-Screen PWA on iOS 16.4+) and Apple Push (native iOS app in `native/`), implemented without dependencies and verified against the RFC 8291 test vector.
+- Sent within a second of the event; `/api/cron/notify` is the backstop. Details: `docs/ARCHITECTURE.md` §7, setup: `docs/DEPLOYMENT.md` §9.
+
+### iOS app
+- `native/` is a Capacitor 7 shell around the live portal. Build steps for Claude Code in VS Code: `native/CLAUDE.md`. Launch checklist: `docs/MVP_READINESS.md`.
+
 ---
 
 ## Scripts
@@ -119,6 +126,8 @@ Full details — schema, routes, auth model, payment architecture, rent engine, 
 | `npm run db:check` | assert `schema.prisma` matches the live database |
 | `npm run rent:run` | post due rent + late fees + send reminders (also `POST /api/cron/rent`) |
 | `npm run icons` | regenerate PWA icons from `public/brand/logo-mark.png` |
+| `npm run push:keys` | generate Web Push (VAPID) keys |
+| `npm run owner:create` | create the first owner account (`OWNER_EMAIL`, `OWNER_NAME`, `OWNER_PASSWORD`) |
 
 ## Adding the portal to the website
 Link the site's **Apply** buttons to `https://<portal-domain>/apply` and add a **Resident login** link to `https://<portal-domain>/login`.

@@ -96,9 +96,16 @@ Admin ─ Record offline payment ─▶ SUCCEEDED OFFLINE payment + ledger + aud
 
 ## 7. Notifications
 
-`notify()` writes an in-app notification plus one `notification_deliveries` row per channel. In-app is delivered immediately; EMAIL/SMS/PUSH rows are queued only when a `ChannelAdapter` is registered (`src/lib/notify.ts`) and are sent by `deliverPendingNotifications()` (called by the cron). Dedupe keys make reminders fire once per due date.
+`notify()` writes an in-app notification plus one `notification_deliveries` row per registered channel (`src/lib/notify.ts`). Dedupe keys make reminders fire once per due date.
 
-Types: rent due soon / due today / overdue, payment succeeded / pending / failed / refunded, application received / status, announcements, account.
+**Push** is the registered channel today (`src/lib/push/`), dependency-free:
+- **Web Push** — RFC 8291 `aes128gcm` payload encryption + RFC 8292 VAPID (ES256) signing, verified against the RFC 8291 test vector in `tests/unit/push.test.ts`. The service worker (`public/sw.js`) shows the notification, focuses/opens the linked page and re-subscribes on `pushsubscriptionchange`.
+- **APNs** — HTTP/2 to `api.push.apple.com` with a cached ES256 provider token (.p8 key). The iOS shell forwards the device token to `POST /api/push/subscribe` via `NativePushBridge`.
+- Devices live in `push_subscriptions` (CHECK constraint enforces the WEB vs APNS shape). Registration is idempotent (upsert by endpoint / token); sign-out, "turn sign-in off" and 410/`Unregistered` disable them; 5 consecutive failures disable them.
+- Delivery: `notify()` queues `PENDING` PUSH rows and `scheduleDelivery()` drains them ~0.4s later (retry at 4s); `/api/cron/notify` is the backstop sweep. Rows are **claimed** by setting `attemptedAt` in a conditional update, so concurrent sweeps never double-send. No devices → `SKIPPED`. The app badge = unread count.
+- Email/SMS: add a `ChannelAdapter` with a `send()` and register it — no other code changes.
+
+Types: rent due soon / due today / overdue, payment succeeded / pending / failed / refunded, application received / status, maintenance updates, announcements, account.
 
 ## 8. PWA
 

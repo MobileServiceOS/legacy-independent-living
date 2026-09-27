@@ -25,7 +25,9 @@
     "rent:run": "tsx scripts/run-rent-engine.ts",
     "icons": "python3 scripts/make-icons.py",
     "verify": "npm run typecheck && npm run lint && npm test",
-    "typecheck:core": "tsc -p tsconfig.core.json"
+    "typecheck:core": "tsc -p tsconfig.core.json",
+    "owner:create": "tsx scripts/create-owner.ts",
+    "push:keys": "node scripts/generate-vapid-keys.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

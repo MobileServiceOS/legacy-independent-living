@@ -46,7 +46,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ paymen
   ];
 
   return (
-    <main id="main" className="mx-auto max-w-xl px-4 py-8">
+    <main id="main" className="mx-auto max-w-xl px-4 pt-[calc(2rem+env(safe-area-inset-top))] pb-8">
       <div className="no-print mb-4 flex items-center justify-between gap-3">
         <Link href={backHref} className="font-bold">
           ← Back

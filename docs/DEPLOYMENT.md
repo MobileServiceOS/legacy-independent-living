@@ -17,6 +17,8 @@ The portal is a standard Next.js 15 server app + PostgreSQL. It does **not** run
 | `PAYPAL_WEBHOOK_ID` | the ID of the webhook created in step 6 |
 | `CRON_SECRET` | `openssl rand -hex 32` |
 | `STORAGE_DIR` | path on the persistent volume |
+| `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | `npm run push:keys` (once — never rotate casually) |
+| `APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_BUNDLE_ID` / `APNS_PRIVATE_KEY` / `APNS_ENV` | see §9 (native iOS app only) |
 
 ## 3. Build & release
 ```bash
@@ -30,18 +32,21 @@ Health check: `GET /api/health`.
 ## 4. First owner account
 Don't run the demo seed in production. Create the owner once:
 ```bash
-npx tsx -e '
-import { prisma } from "./src/lib/db"; import { hashPassword } from "./src/lib/security/crypto";
-(async () => { await prisma.user.create({ data: { email: process.env.OWNER_EMAIL!, name: process.env.OWNER_NAME!, role: "ADMIN", status: "ACTIVE", passwordHash: await hashPassword(process.env.OWNER_PASSWORD!) } }); await prisma.$disconnect(); })();'
+OWNER_EMAIL=you@example.com OWNER_NAME="Your Name" OWNER_PASSWORD='a-long-passphrase' npm run owner:create
 ```
 Then sign in, open **Settings** (timezone, office phone/email, late fee, partial-payment rules) and add properties/rooms.
 
-## 5. Scheduled job
-Daily (e.g. 6:00 America/Chicago):
+## 5. Scheduled jobs
+| Job | Schedule | Call |
+|---|---|---|
+| Rent engine (charges, late fees, reminders) | daily, ~6:00 America/Chicago | `POST /api/cron/rent` |
+| Notification sweep (push retry/backstop) | every 5 minutes | `POST /api/cron/notify` |
 ```bash
 curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://portal.legacyindependentliving.net/api/cron/rent
+curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://portal.legacyindependentliving.net/api/cron/notify
 ```
-(Vercel: add a cron in `vercel.json` hitting `/api/cron/rent`; it sends a GET with the bearer header when `CRON_SECRET` is set.)
+(Vercel: add both to `vercel.json` crons; Vercel sends a GET with the bearer header when `CRON_SECRET` is set — both routes accept GET.)
+Pushes normally go out within a second of the event; the sweep only catches retries and anything interrupted by a restart.
 
 ## 6. PayPal
 1. Use a **PayPal Business** account. At developer.paypal.com → **Apps & Credentials**, create an app (Sandbox first, then Live) and copy the Client ID + Secret.
@@ -59,3 +64,15 @@ How it works: the resident is sent to PayPal, pays with PayPal balance, bank, or
 
 ## 8. Backups
 Enable daily automated backups + point-in-time recovery on the Postgres provider. The ledger is the financial record.
+
+## 9. Push notifications
+**Web Push** (desktop browsers, Android, and iPhone/iPad when the portal is added to the Home Screen on iOS 16.4+):
+1. `npm run push:keys` → put the three `VAPID_*` lines in the environment. Deploy.
+2. Residents see "Turn on notifications" on Home / Profile; staff under Notifications.
+
+**Apple Push** (native iOS app in `native/`):
+1. developer.apple.com → Certificates, IDs & Profiles → **Keys** → **+** → enable *Apple Push Notifications service (APNs)* → download the `.p8` (only downloadable once). Note the **Key ID** and your **Team ID**.
+2. Set `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_BUNDLE_ID=net.legacyindependentliving.app`, `APNS_PRIVATE_KEY` (the .p8 contents; `\n` escapes are fine), `APNS_ENV=production` (TestFlight + App Store builds) or `sandbox` (Xcode debug installs).
+3. Build the app per `native/CLAUDE.md`.
+
+What gets pushed: rent due soon / today / overdue, payment received / pending / failed / refunded, repair status changes and staff replies, new applications and repair requests (staff), and account notices. Devices that return "gone" (410 / `Unregistered`) or fail 5 times in a row are switched off automatically; signing out removes the device.

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
+import { PushPrompt } from "@/components/push-controls";
+import { vapidConfig } from "@/lib/push";
 import { Card, DemoTag, Money, Notice, PaymentStatusBadge, RentStatusBadge } from "@/components/ui";
 import { dateOnlyFromDbDate, formatLong, formatShort } from "@/domain/dates";
 import { formatCents } from "@/domain/money";
@@ -132,6 +134,8 @@ export default async function ResidentHome() {
           )}
         </Card>
       </div>
+
+      <PushPrompt vapidKey={vapidConfig()?.publicKey ?? null} />
 
       <Link href="/maintenance/new" className="card flex min-h-16 items-center justify-between gap-3 px-5 py-4 text-ink no-underline hover:bg-paper-2">
         <span className="flex items-center gap-3">

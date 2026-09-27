@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
+import { PushSettings, SignOutButton } from "@/components/push-controls";
+import { ActionForm, Checkbox, Disclosure, Input, SubmitButton } from "@/components/form";
+import { requestDeletionAction } from "@/app/actions/resident";
+import { vapidConfig } from "@/lib/push";
 import { Card, DefinitionList } from "@/components/ui";
 import { dateOnlyFromDbDate, formatLong } from "@/domain/dates";
 import { formatCents } from "@/domain/money";
@@ -68,11 +72,24 @@ export default async function ProfilePage() {
       <p className="text-center text-sm text-muted">
         Need to update something? Contact the office{settings.supportPhone ? ` at ${settings.supportPhone}` : ""}.
       </p>
-      <form action={logoutAction}>
-        <button type="submit" className="btn-secondary w-full">
-          Sign out
-        </button>
-      </form>
+      <PushSettings vapidKey={vapidConfig()?.publicKey ?? null} />
+      <SignOutButton action={logoutAction} className="btn-secondary w-full" />
+      <Disclosure summary={<span className="text-muted">Delete my account</span>}>
+        <ActionForm action={requestDeletionAction} className="space-y-3">
+          <p className="text-sm text-muted">
+            We’ll remove your account and personal details. Payment and rent records are kept as the law requires. The office will contact you to confirm
+            {settings.supportPhone ? ` (${settings.supportPhone})` : ""}.
+          </p>
+          <Input name="reason" label="Reason (optional)" />
+          <Checkbox name="confirm" label="Yes, I want my account deleted" />
+          <SubmitButton small variant="danger">
+            Request account deletion
+          </SubmitButton>
+        </ActionForm>
+      </Disclosure>
+      <p className="text-center text-sm">
+        <Link href="/privacy">Privacy policy</Link>
+      </p>
     </div>
   );
 }

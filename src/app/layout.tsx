@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
+import { NativePushBridge } from "@/components/push-controls";
 import { ServiceWorkerRegistration } from "@/components/sw-register";
 import "./globals.css";
 
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         {children}
         <ServiceWorkerRegistration />
+        <NativePushBridge />
       </body>
     </html>
   );

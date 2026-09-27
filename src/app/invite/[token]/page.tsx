@@ -23,7 +23,10 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
     );
   }
   return (
-    <AuthShell title={`Welcome, ${invite.user.name.split(" ")[0]}`} subtitle="Create a password to finish setting up your resident account.">
+    <AuthShell
+      title={invite.user.status === "ACTIVE" ? "Reset your password" : `Welcome, ${invite.user.name.split(" ")[0]}`}
+      subtitle={invite.user.status === "ACTIVE" ? "Choose a new password. You'll be signed out of your other devices." : "Create a password to finish setting up your resident account."}
+    >
       <ActionForm action={acceptInviteAction} className="space-y-4">
         <Hidden name="token" value={token} />
         <div className="rounded-xl bg-paper-2 px-4 py-3 text-[0.95rem]">
@@ -39,7 +42,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         />
         <Input name="confirm" type="password" label="Type it again" autoComplete="new-password" required />
         <SubmitButton className="w-full" pendingText="Setting up…">
-          Create my account
+          {invite.user.status === "ACTIVE" ? "Save new password" : "Create my account"}
         </SubmitButton>
       </ActionForm>
     </AuthShell>

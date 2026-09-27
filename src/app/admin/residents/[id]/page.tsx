@@ -38,6 +38,7 @@ import {
   recordOfflinePaymentAction,
   refundPaymentAction,
   reissueInviteAction,
+  setSignInAction,
   simulateAchAction,
   transferRoomAction,
   updateResidentAction,
@@ -403,15 +404,35 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
                 </ActionForm>
               </Disclosure>
 
-              {r.user?.status === "INVITED" ? (
-                <Disclosure summary="Account setup link">
-                  <ActionForm action={reissueInviteAction} copyResult={{ key: "inviteUrl", label: "New setup link" }}>
-                    <Hidden name="residentId" value={r.id} />
-                    <p className="mb-3 text-sm text-muted">The resident hasn’t set a password yet. Create a fresh link to text or email them.</p>
-                    <SubmitButton small variant="secondary">
-                      Create new setup link
-                    </SubmitButton>
-                  </ActionForm>
+              {r.user ? (
+                <Disclosure summary="Sign-in & password">
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted">
+                      Account:{" "}
+                      <strong>{r.user.status === "ACTIVE" ? "active" : r.user.status === "INVITED" ? "not set up yet" : "sign-in turned off"}</strong>
+                      {r.user.lastLoginAt ? ` · last signed in ${formatDateTime(r.user.lastLoginAt, settings.timezone)}` : ""}
+                    </p>
+                    {r.user.status !== "DISABLED" ? (
+                      <ActionForm action={reissueInviteAction} copyResult={{ key: "inviteUrl", label: r.user.status === "ACTIVE" ? "Password reset link" : "Setup link" }}>
+                        <Hidden name="residentId" value={r.id} />
+                        <p className="mb-3 text-sm text-muted">
+                          {r.user.status === "ACTIVE"
+                            ? "Forgot their password? Create a one-time reset link and text or email it to them (valid 14 days)."
+                            : "They haven’t set a password yet. Create a fresh link to text or email them."}
+                        </p>
+                        <SubmitButton small variant="secondary">
+                          {r.user.status === "ACTIVE" ? "Create password reset link" : "Create new setup link"}
+                        </SubmitButton>
+                      </ActionForm>
+                    ) : null}
+                    <ActionForm action={setSignInAction} resetKey={r.user.status}>
+                      <Hidden name="residentId" value={r.id} />
+                      <Hidden name="enabled" value={r.user.status === "DISABLED" ? "true" : "false"} />
+                      <SubmitButton small variant={r.user.status === "DISABLED" ? "secondary" : "danger"}>
+                        {r.user.status === "DISABLED" ? "Turn sign-in back on" : "Turn off sign-in"}
+                      </SubmitButton>
+                    </ActionForm>
+                  </div>
                 </Disclosure>
               ) : null}
 

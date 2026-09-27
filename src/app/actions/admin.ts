@@ -38,6 +38,7 @@ import {
   moveOutResident,
   placeResident,
   reissueInvite,
+  setSignInEnabled,
   transferRoom,
   updateResident,
 } from "@/server/residents";
@@ -135,11 +136,20 @@ export async function moveOutAction(prev: ActionState, fd: FormData): Promise<Ac
   });
 }
 
+export async function setSignInAction(prev: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(prev, fd, z.object({ residentId: id, enabled: z.enum(["true", "false"]) }), async ({ residentId, enabled }) => {
+    const user = await requireActionPermission("residents:write");
+    await setSignInEnabled(actorOf(user), residentId, enabled === "true");
+    refreshAdmin();
+    return { message: enabled === "true" ? "Sign-in turned back on." : "Sign-in turned off. They've been signed out on every device." };
+  });
+}
+
 export async function reissueInviteAction(prev: ActionState, fd: FormData): Promise<ActionState> {
   return runAction(prev, fd, z.object({ residentId: id }), async ({ residentId }) => {
     const user = await requireActionPermission("residents:write");
     const inviteUrl = await reissueInvite(actorOf(user), residentId);
-    return { message: "New setup link created. Earlier links no longer work.", data: { inviteUrl } };
+    return { message: "New link created. Earlier links no longer work — share this one by text or email.", data: { inviteUrl } };
   });
 }
 

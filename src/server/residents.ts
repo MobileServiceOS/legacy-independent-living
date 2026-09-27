@@ -11,7 +11,7 @@ import type { LedgerEntryType } from "../domain/ledger";
 import { audit, AUDIT_ACTIONS, type Actor } from "../lib/audit";
 import { prisma, type Db, type Tx } from "../lib/db";
 import { env } from "../lib/env";
-import { notify } from "../lib/notify";
+import { notify, notifyAdmins } from "../lib/notify";
 import { generateToken, hashToken } from "../lib/security/crypto";
 import { businessToday, getSettings } from "../lib/settings";
 import { NotFoundError, UserError } from "./errors";
@@ -348,12 +348,60 @@ export async function updateResident(
   });
 }
 
+/**
+ * One-time link to set (new account) or reset (existing account) a password.
+ * Earlier links stop working. Used for "forgot password" — the office shares it.
+ */
 export async function reissueInvite(actor: Actor, residentId: string): Promise<string> {
   return prisma.$transaction(async (tx) => {
     const resident = await tx.resident.findUnique({ where: { id: residentId }, include: { user: true } });
     if (!resident?.user) throw new NotFoundError("Resident account");
-    if (resident.user.status === "ACTIVE") throw new UserError("This resident has already set up their account");
-    return issueInvite(tx, actor, resident.user.id);
+    if (resident.user.status === "DISABLED") throw new UserError("Sign-in is turned off for this resident. Turn it back on first.");
+    const url = await issueInvite(tx, actor, resident.user.id);
+    if (resident.user.status === "ACTIVE") await audit(tx, actor, "user.password_reset_link", "user", resident.user.id, { residentId });
+    return url;
+  });
+}
+
+/** Turn a resident's sign-in off (signs them out everywhere, stops push) or back on. */
+export async function setSignInEnabled(actor: Actor, residentId: string, enabled: boolean): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const resident = await tx.resident.findUnique({ where: { id: residentId }, include: { user: true } });
+    if (!resident?.user) throw new NotFoundError("Resident account");
+    const u = resident.user;
+    const next = enabled ? (u.passwordHash ? "ACTIVE" : "INVITED") : "DISABLED";
+    if (u.status === next) return;
+    await tx.user.update({ where: { id: u.id }, data: { status: next } });
+    if (!enabled) {
+      await tx.session.deleteMany({ where: { userId: u.id } });
+      await tx.inviteToken.updateMany({ where: { userId: u.id, usedAt: null }, data: { usedAt: new Date() } });
+      await tx.pushSubscription.updateMany({ where: { userId: u.id, disabledAt: null }, data: { disabledAt: new Date() } });
+    }
+    await audit(tx, actor, enabled ? "user.sign_in_enabled" : "user.sign_in_disabled", "resident", residentId, { userId: u.id });
+  });
+}
+
+/** Resident asks for their account to be deleted (App Store 5.1.1(v)). The office completes it. */
+export async function requestAccountDeletion(user: { id: string; email: string; name: string }, reason: string | null, today: string): Promise<boolean> {
+  return prisma.$transaction(async (tx) => {
+    const created = await notify(tx, {
+      userId: user.id,
+      type: "ACCOUNT",
+      title: "We received your deletion request",
+      body: "The office will contact you to confirm. Payment records are kept as required by law; everything else is removed.",
+      dedupeKey: `deletion-ack:${user.id}:${today}`,
+    });
+    if (!created) return false;
+    const resident = await tx.resident.findUnique({ where: { userId: user.id }, select: { id: true } });
+    await notifyAdmins(tx, {
+      type: "ACCOUNT",
+      title: "Account deletion requested",
+      body: `${user.name} (${user.email}) asked to delete their account.${reason ? ` Reason: ${reason}` : ""}`,
+      link: resident ? `/admin/residents/${resident.id}` : "/admin/residents",
+      dedupeKey: `deletion:${user.id}:${today}`,
+    });
+    await audit(tx, { id: user.id, email: user.email, role: "RESIDENT" }, "user.deletion_requested", "user", user.id, { reason });
+    return true;
   });
 }
 

@@ -61,7 +61,7 @@ CI re-seeds demo data, captures every device, and commits the results. List of s
 
 **Support URL**: `https://legacyindependentliving.net/contact/`
 **Marketing URL**: `https://legacyindependentliving.net`
-**Privacy Policy URL**: required — publish one (e.g. `https://legacyindependentliving.net/privacy/`) before submitting.
+**Privacy Policy URL**: `https://portal.legacyindependentliving.net/privacy` (built into the portal — review the wording before submitting).
 
 ## App Review notes (paste into "Notes" + sign-in info)
 
@@ -81,4 +81,6 @@ No third-party advertising, no tracking, no data sold.
 
 ## Before you submit — iOS wrapper
 
-This is a web app (PWA). To appear in the App Store it must ship inside a native shell (e.g. **Capacitor**) pointing at the production URL, and Apple expects app-like value beyond a website (Guideline 4.2). This app qualifies well — sign-in, payments, repairs with camera photos, notifications — and the native build should add **push notifications** and the **camera** plugin for repair photos to make that clear.
+The native shell is ready in `native/` (Capacitor 7, loads the production portal, native push via APNs, camera/photo permissions for repair photos). Build it with Claude Code in VS Code on a Mac by following `native/CLAUDE.md`. Guideline 4.2 (minimum functionality) is covered by sign-in, payments, repair requests with photos, and native push notifications.
+
+Account deletion (Guideline 5.1.1(v)): residents can request deletion in **Profile → Delete my account**; staff are alerted, and records required for housing/financial law are retained as the privacy policy explains.

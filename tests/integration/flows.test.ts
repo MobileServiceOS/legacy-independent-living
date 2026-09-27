@@ -18,6 +18,7 @@ const MIGRATIONS = join(import.meta.dirname, "../../prisma/migrations");
 
 process.env.DATABASE_URL = DB_URL;
 process.env.PAYMENTS_PROVIDER = "mock";
+process.env.NOTIFY_SYNC_DELIVERY = "off"; // tests drive delivery explicitly
 process.env.MOCK_PAYMENT_METHODS = "PAYPAL,DEBIT_CARD,CREDIT_CARD,ACH"; // exercise every sandbox method
 process.env.APP_URL = "http://localhost:3000";
 process.env.APP_TODAY = "2026-09-27";
@@ -37,6 +38,8 @@ type Mods = {
   maint: typeof import("../../src/server/maintenance");
   providers: typeof import("../../src/lib/payments");
   paypal: typeof import("../../src/lib/payments/paypal");
+  push: typeof import("../../src/lib/push");
+  notify: typeof import("../../src/lib/notify");
 };
 let m: Mods;
 let actor: { id: string; email: string; role: "ADMIN" };
@@ -63,6 +66,8 @@ before(async () => {
     maint: await import("../../src/server/maintenance"),
     providers: await import("../../src/lib/payments"),
     paypal: await import("../../src/lib/payments/paypal"),
+    push: await import("../../src/lib/push"),
+    notify: await import("../../src/lib/notify"),
   };
   const { hashPassword } = await import("../../src/lib/security/crypto");
   const admin = await m.prisma.user.create({
@@ -576,5 +581,116 @@ describe("PayPal: checkout → return capture → ledger → webhook replay → 
     await m.payments.cancelRedirectPayment(user, paymentId);
     assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).status, "CANCELED");
     assert.equal((await balanceOf(residentId)).balanceCents, 2500);
+  });
+});
+
+describe("push notifications: Web Push + APNs delivery", () => {
+  let userId = "";
+  const webSent: string[] = [];
+  const apnsSent: string[] = [];
+  let webStatus = 201;
+  const token = "ab".repeat(32);
+
+  before(async () => {
+    const { generateVapidKeys } = await import("../../src/lib/push/webpush");
+    const { generateKeyPairSync } = await import("node:crypto");
+    const v = generateVapidKeys();
+    process.env.VAPID_PUBLIC_KEY = v.publicKey;
+    process.env.VAPID_PRIVATE_KEY = v.privateKey;
+    const { privateKey } = generateKeyPairSync("ec", { namedCurve: "prime256v1" });
+    Object.assign(process.env, {
+      APNS_KEY_ID: "KEY1234567",
+      APNS_TEAM_ID: "TEAM123456",
+      APNS_BUNDLE_ID: "net.legacyindependentliving.app",
+      APNS_PRIVATE_KEY: privateKey.export({ format: "pem", type: "pkcs8" }).toString(),
+    });
+    m.push.pushTransports.fetchImpl = (async (url: string) => {
+      webSent.push(url);
+      return new Response(webStatus === 201 ? null : "gone", { status: webStatus });
+    }) as unknown as typeof fetch;
+    m.push.pushTransports.apns = async (req) => {
+      apnsSent.push(req.path);
+      return { status: 200, body: "" };
+    };
+    const r = await m.prisma.resident.findFirstOrThrow({ where: { email: "casey@test.local" } });
+    userId = r.userId!;
+    const { createECDH, randomBytes } = await import("node:crypto");
+    const ua = createECDH("prime256v1");
+    ua.generateKeys();
+    await m.push.registerDevice(userId, { kind: "WEB", endpoint: "https://push.example.test/sub/casey", p256dh: ua.getPublicKey().toString("base64url"), auth: randomBytes(16).toString("base64url") });
+    await m.push.registerDevice(userId, { kind: "APNS", token: token.toUpperCase() });
+    await m.prisma.notificationDelivery.updateMany({ where: { status: "PENDING" }, data: { status: "SKIPPED" } }); // ignore earlier suites
+  });
+
+  after(() => {
+    for (const k of ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY", "APNS_KEY_ID", "APNS_TEAM_ID", "APNS_BUNDLE_ID", "APNS_PRIVATE_KEY"]) delete process.env[k];
+    m.push.pushTransports.fetchImpl = undefined;
+    m.push.pushTransports.apns = undefined;
+  });
+
+  test("re-registering the same device is idempotent (token normalized)", async () => {
+    await m.push.registerDevice(userId, { kind: "APNS", token });
+    assert.equal(await m.push.activeDeviceCount(userId), 2);
+  });
+
+  test("a notification reaches every device once, even with concurrent sweeps", async () => {
+    await m.notify.notify(m.prisma, { userId, type: "RENT_DUE_SOON", title: "Rent due soon", body: "Your rent of $800.00 is due Nov 1.", link: "/home" });
+    const [a, b] = await Promise.all([m.notify.deliverPendingNotifications(), m.notify.deliverPendingNotifications()]);
+    assert.equal(a.sent + b.sent, 1);
+    assert.deepEqual(webSent, ["https://push.example.test/sub/casey"]);
+    assert.deepEqual(apnsSent, [`/3/device/${token}`]);
+    const d = await m.prisma.notificationDelivery.findFirstOrThrow({ where: { channel: "PUSH", notification: { userId, title: "Rent due soon" } } });
+    assert.equal(d.status, "SENT");
+  });
+
+  test("expired browser subscription (410) is disabled automatically; iOS keeps working", async () => {
+    webStatus = 410;
+    await m.notify.notify(m.prisma, { userId, type: "ANNOUNCEMENT", title: "Water off Tue", body: "9–11am" });
+    await m.notify.deliverPendingNotifications();
+    const web = await m.prisma.pushSubscription.findFirstOrThrow({ where: { userId, kind: "WEB" } });
+    assert.ok(web.disabledAt);
+    assert.equal(apnsSent.length, 2);
+    webStatus = 201;
+  });
+
+  test("users without devices → SKIPPED, disabled users → SKIPPED", async () => {
+    const admin = await m.prisma.user.findFirstOrThrow({ where: { role: "ADMIN" } });
+    await m.notify.notify(m.prisma, { userId: admin.id, type: "ACCOUNT", title: "No devices", body: "x" });
+    await m.notify.deliverPendingNotifications();
+    const d = await m.prisma.notificationDelivery.findFirstOrThrow({ where: { channel: "PUSH", notification: { title: "No devices" } } });
+    assert.equal(d.status, "SKIPPED");
+  });
+
+  test("owner turns off sign-in: signed out everywhere, pushes stop, can't sign in; turning back on restores", async () => {
+    const r = await m.prisma.resident.findFirstOrThrow({ where: { userId } });
+    const { token: sessionToken } = await m.auth.createSession(await m.prisma.user.findUniqueOrThrow({ where: { id: userId } }), {});
+    await m.residents.setSignInEnabled(actor, r.id, false);
+    assert.equal(await m.auth.lookupSession(sessionToken), null);
+    assert.equal(await m.push.activeDeviceCount(userId), 0);
+    await assert.rejects(m.auth.authenticate("casey@test.local", "Resident2026ok"), /turned off/);
+    await m.notify.notify(m.prisma, { userId, type: "ACCOUNT", title: "While disabled", body: "x" });
+    await m.notify.deliverPendingNotifications();
+    assert.equal((await m.prisma.notificationDelivery.findFirstOrThrow({ where: { channel: "PUSH", notification: { title: "While disabled" } } })).status, "SKIPPED");
+    await assert.rejects(m.residents.reissueInvite(actor, r.id), /turned off/);
+    await m.residents.setSignInEnabled(actor, r.id, true);
+    assert.ok(await m.auth.authenticate("casey@test.local", "Resident2026ok"));
+    assert.ok(await m.prisma.auditLog.findFirst({ where: { action: "user.sign_in_disabled", entityId: r.id } }));
+  });
+
+  test("forgot password: office creates a reset link; new password works, old one doesn't", async () => {
+    const r = await m.prisma.resident.findFirstOrThrow({ where: { userId } });
+    const url = await m.residents.reissueInvite(actor, r.id);
+    await m.auth.acceptInvite(url.split("/invite/")[1]!, "BrandNew2026pass");
+    await assert.rejects(m.auth.authenticate("casey@test.local", "Resident2026ok"), /don't match/);
+    assert.ok(await m.auth.authenticate("casey@test.local", "BrandNew2026pass"));
+    assert.ok(await m.prisma.auditLog.findFirst({ where: { action: "user.password_reset_link", entityId: userId } }));
+  });
+
+  test("account deletion request notifies the office once per day", async () => {
+    const u = await m.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    assert.equal(await m.residents.requestAccountDeletion(u, "Moving away", TODAY), true);
+    assert.equal(await m.residents.requestAccountDeletion(u, "again", TODAY), false);
+    assert.equal(await m.prisma.notification.count({ where: { title: "Account deletion requested" } }), 1);
+    assert.ok(await m.prisma.auditLog.findFirst({ where: { action: "user.deletion_requested", entityId: userId } }));
   });
 });

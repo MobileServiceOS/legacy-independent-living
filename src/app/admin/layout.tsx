@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AdminNav, type NavItem } from "@/components/nav";
+import { SignOutButton } from "@/components/push-controls";
 import { requirePagePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { unreadCount } from "@/server/notifications";
@@ -27,7 +28,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   ];
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
-      <aside className="no-print bg-forest-deep text-white lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto">
+      <aside className="no-print bg-forest-deep pt-[env(safe-area-inset-top)] text-white lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto">
         <div className="flex items-center justify-between gap-3 px-4 py-4 lg:block">
           <Link href="/admin" className="flex items-center gap-3 text-white no-underline">
             <Image src="/brand/logo-mark.webp" alt="" width={44} height={44} className="rounded-full bg-white" />
@@ -41,11 +42,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <AdminNav items={items} />
           <div className="mt-4 border-t border-white/15 pt-4 lg:mt-8">
             <p className="truncate px-3 text-sm text-white/70">{user.name}</p>
-            <form action={logoutAction}>
-              <button type="submit" className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 font-bold text-white/80 hover:bg-white/10 hover:text-white">
-                Sign out
-              </button>
-            </form>
+            <SignOutButton action={logoutAction} label="Sign out" className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 font-bold text-white/80 hover:bg-white/10 hover:text-white" />
           </div>
         </div>
       </aside>

@@ -32,7 +32,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="mt-6 space-y-2 text-center text-[0.95rem] text-muted">
         <p>New resident? Use the link the office sent you to set your password.</p>
         <p>
+          <strong>Forgot your password?</strong> Contact the office — they’ll send you a reset link.
+        </p>
+        <p>
           Looking for a home? <Link href="/apply" className="font-bold">Apply to Legacy</Link>
+        </p>
+        <p className="text-xs">
+          <Link href="/privacy">Privacy policy</Link>
         </p>
       </div>
     </AuthShell>

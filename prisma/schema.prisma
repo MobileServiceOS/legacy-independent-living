@@ -134,6 +134,11 @@ enum MaintenancePriority {
   URGENT
 }
 
+enum PushKind {
+  WEB
+  APNS
+}
+
 enum NotificationChannel {
   IN_APP
   EMAIL
@@ -161,8 +166,9 @@ model User {
 
   resident      Resident?
   sessions      Session[]
-  invites       InviteToken[]  @relation("InviteUser")
+  invites       InviteToken[]      @relation("InviteUser")
   notifications Notification[]
+  pushDevices   PushSubscription[]
 
   @@map("users")
 }
@@ -584,6 +590,28 @@ model MaintenancePhoto {
 
   @@index([requestId])
   @@map("maintenance_photos")
+}
+
+/// A device that receives push: a browser (Web Push) or the iOS app (APNs).
+model PushSubscription {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  kind          PushKind
+  endpoint      String?   @unique
+  p256dh        String?
+  auth          String?
+  apnsToken     String?   @unique @map("apns_token")
+  label         String?
+  failures      Int       @default(0)
+  lastSuccessAt DateTime? @map("last_success_at")
+  disabledAt    DateTime? @map("disabled_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 /// Singleton row (id = 1) — business rules the owner can tune.
