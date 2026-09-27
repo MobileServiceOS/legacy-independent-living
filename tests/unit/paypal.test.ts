@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- inspecting loosely-typed PayPal JSON in assertions */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { buildOrderBody, centsToPayPalValue, mapPayPalWebhook, PayPalPaymentProvider } from "../../src/lib/payments/paypal.ts";

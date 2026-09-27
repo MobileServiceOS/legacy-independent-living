@@ -494,6 +494,9 @@ describe("PayPal: checkout → return capture → ledger → webhook replay → 
     const r = await m.prisma.resident.findFirstOrThrow({ where: { email: "pat@test.local" } });
     residentId = r.id;
     user = { id: r.userId!, email: r.email };
+    // Earlier suites run the rent engine into the future for everyone; settle Pat to $0 first.
+    const open = (await balanceOf(residentId)).balanceCents;
+    if (open > 0) await m.payments.recordOfflinePayment(actor, { residentId, amount: open, paidOn: TODAY, method: "CASH", reference: "test reset", note: null });
     await m.residents.addManualLedgerEntry(actor, { residentId, kind: "OTHER_CHARGE", amount: 5000, effectiveDate: TODAY, description: "Key replacement" });
     const fetchImpl = (async (url: string, init: RequestInit) => {
       const path = new URL(url).pathname;

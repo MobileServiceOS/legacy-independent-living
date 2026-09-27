@@ -28,6 +28,7 @@ test("report → schedule → resident sees visit", async ({ page, browser }) =>
   await signIn(page, "gloria.james@legacy.demo", "ResidentDemo2026!");
   await page.getByRole("link", { name: "Repairs" }).first().click();
   await page.getByTestId("report-problem").click();
+  await expect(page).toHaveURL(/\/maintenance\/new$/);
   await ready(page);
   await page.getByLabel("What kind of problem is it?").selectOption("ELECTRICAL");
   await page.getByLabel("In a few words, what's wrong?").fill(title);
@@ -47,6 +48,8 @@ test("report → schedule → resident sees visit", async ({ page, browser }) =>
   await signIn(owner, "owner@legacy.demo", "LegacyDemo2026!");
   await owner.goto("/admin/maintenance");
   await owner.getByRole("link", { name: title }).click();
+  await expect(owner).toHaveURL(/\/admin\/maintenance\/[^/?]+$/);
+  await expect(owner.getByRole("heading", { name: title })).toBeVisible();
   await ready(owner);
   await owner.getByLabel("Status", { exact: true }).selectOption("SCHEDULED");
   await owner.getByLabel("Visit date & time").fill("2026-09-29T10:00");
@@ -54,7 +57,8 @@ test("report → schedule → resident sees visit", async ({ page, browser }) =>
   await owner.getByLabel("Note", { exact: true }).fill("Sam will replace the fixture.");
   await owner.getByRole("button", { name: "Save update" }).click();
   await expect(owner.getByText("Request updated.")).toBeVisible();
-  await expect(owner.getByText("Scheduled").first()).toBeVisible();
+  // Form refreshes to the new state (no stale "Submitted" default on the next save).
+  await expect(owner.getByLabel("Status", { exact: true })).toHaveValue("SCHEDULED");
   await ready(owner);
   await owner.getByLabel("Note", { exact: true }).fill("Fixture is $35");
   await owner.getByLabel("Staff-only note").check();
