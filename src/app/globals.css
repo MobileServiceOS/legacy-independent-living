@@ -49,6 +49,7 @@
   h2,
   h3 {
     @apply font-serif text-forest-deep;
+    font-variant-numeric: lining-nums;
     font-weight: 600;
     line-height: 1.15;
   }
@@ -90,6 +91,11 @@
 }
 @utility btn-sm {
   @apply min-h-10! rounded-lg! px-3! text-sm!;
+}
+
+/* Cormorant defaults to old-style figures; money and stats need lining numerals. */
+@utility tabular-nums {
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 @layer components {

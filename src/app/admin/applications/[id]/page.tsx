@@ -40,7 +40,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
         }
       />
       <div className="grid gap-6 xl:grid-cols-[1fr_26rem]">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card title="Application">
             <DefinitionList
               items={[

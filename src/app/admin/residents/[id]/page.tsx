@@ -101,7 +101,7 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
       </section>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1fr_24rem]">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <div className="grid gap-6 lg:grid-cols-2">
             <Card title="Personal information">
               <DefinitionList
@@ -304,7 +304,7 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
           </Card>
         </div>
 
-        <aside className="space-y-3" aria-label="Actions">
+        <aside className="min-w-0 space-y-3" aria-label="Actions">
           <h2 className="text-2xl">Actions</h2>
           <Disclosure summary="Record offline payment" defaultOpen={row.position.balanceCents > 0}>
             <ActionForm action={recordOfflinePaymentAction} className="space-y-3" resetOnSuccess linkResult={{ key: "receiptUrl", label: "Open receipt" }}>

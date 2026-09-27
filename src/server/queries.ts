@@ -89,7 +89,7 @@ export async function adminDashboard(today: DateOnly) {
     prisma.application.count({ where: { status: { in: ["NEW", "UNDER_REVIEW"] } } }),
     prisma.payment.findMany({
       where: { status: { in: ["SUCCEEDED", "PROCESSING"] } },
-      orderBy: { createdAt: "desc" },
+      orderBy: [{ paidOn: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
       take: 5,
       include: { resident: { select: { firstName: true, lastName: true } } },
     }),

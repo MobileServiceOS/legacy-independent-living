@@ -46,7 +46,7 @@ export default async function SettingsPage() {
             <SubmitButton>Save settings</SubmitButton>
           </ActionForm>
         </Card>
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card title="Payment processor">
             {provider.isSandbox ? (
               <Notice tone="warn" title={provider.name === "MOCK" ? "Sandbox (mock) mode" : "Stripe test mode"}>

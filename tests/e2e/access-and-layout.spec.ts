@@ -19,7 +19,17 @@ async function signIn(page: Page, u: { email: string; password: string }) {
 }
 
 async function expectNoHorizontalScroll(page: Page) {
-  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+  // Page-level scroll AND any element poking past the right edge (scroll containers excepted).
+  const overflow = await page.evaluate(() => {
+    const vw = window.innerWidth;
+    let worst = document.documentElement.scrollWidth - vw;
+    for (const el of Array.from(document.body.querySelectorAll<HTMLElement>("main *"))) {
+      if (el.closest(".overflow-x-auto")) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width > 0) worst = Math.max(worst, r.right - vw);
+    }
+    return worst;
+  });
   expect(overflow).toBeLessThanOrEqual(1);
 }
 

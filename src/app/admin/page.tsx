@@ -5,7 +5,7 @@ import { formatMonth, formatShort } from "@/domain/dates";
 import { formatCents } from "@/domain/money";
 import { PAYMENT_METHOD_LABELS } from "@/domain/payments";
 import { requirePagePermission } from "@/lib/auth/session";
-import { formatDateTime } from "@/lib/format";
+import { paymentDate } from "@/lib/format";
 import { businessToday, getSettings } from "@/lib/settings";
 import { adminDashboard } from "@/server/queries";
 import { ensureRentEngineCurrent } from "@/server/rent-engine";
@@ -96,7 +96,7 @@ export default async function AdminDashboard() {
           )}
         </Card>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Card title="Applications">
             <p className="font-serif text-4xl font-semibold text-forest-deep">{d.pendingApplications}</p>
             <p className="text-muted">waiting for review</p>
@@ -116,7 +116,7 @@ export default async function AdminDashboard() {
                         {p.resident.firstName} {p.resident.lastName}
                       </p>
                       <p className="text-xs text-muted">
-                        {PAYMENT_METHOD_LABELS[p.method]} · {formatDateTime(p.createdAt, settings.timezone)}
+                        {PAYMENT_METHOD_LABELS[p.method]} · {formatShort(paymentDate(p, settings.timezone))}
                       </p>
                     </div>
                     <Link href={`/receipts/${p.id}`} className="font-bold tabular-nums">

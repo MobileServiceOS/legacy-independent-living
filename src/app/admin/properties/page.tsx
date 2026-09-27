@@ -27,7 +27,7 @@ export default async function PropertiesPage() {
           Add your first Legacy home above, then add its rooms.
         </EmptyState>
       ) : (
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {properties.map((p) => (
             <Card key={p.id}>
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

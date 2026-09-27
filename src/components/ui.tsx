@@ -120,7 +120,7 @@ export function PageHeader({ title, eyebrow, description, actions }: { title: st
 
 export function Card({ children, className, title, action }: { children: ReactNode; className?: string; title?: ReactNode; action?: ReactNode }) {
   return (
-    <section className={cx("card p-5", className)}>
+    <section className={cx("card min-w-0 p-5", className)}>
       {title || action ? (
         <div className="mb-4 flex items-center justify-between gap-3">
           {title ? <h2 className="text-xl sm:text-2xl">{title}</h2> : <span />}
