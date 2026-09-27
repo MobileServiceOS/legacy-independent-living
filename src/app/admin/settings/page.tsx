@@ -48,13 +48,17 @@ export default async function SettingsPage() {
         </Card>
         <div className="min-w-0 space-y-6">
           <Card title="Payment processor">
-            {provider.isSandbox ? (
-              <Notice tone="warn" title={provider.name === "MOCK" ? "Sandbox (mock) mode" : "Stripe test mode"}>
-                No real money moves. Set <code>PAYMENTS_PROVIDER=stripe</code> with live keys to accept real payments.
+            {provider.name === "MOCK" ? (
+              <Notice tone="warn" title="Sandbox (demo) mode">
+                No real money moves. Set <code>PAYMENTS_PROVIDER=paypal</code> with your PayPal API credentials to accept real payments.
+              </Notice>
+            ) : provider.isSandbox ? (
+              <Notice tone="warn" title={`${provider.name === "PAYPAL" ? "PayPal" : "Stripe"} sandbox`}>
+                Using test credentials — no real money moves. Switch to live credentials to accept real payments.
               </Notice>
             ) : (
-              <Notice tone="ok" title="Stripe (live)">
-                Payments are processed by Stripe. Card and bank details never touch this app.
+              <Notice tone="ok" title={provider.name === "PAYPAL" ? "PayPal (live)" : "Stripe (live)"}>
+                Residents pay on {provider.name === "PAYPAL" ? "PayPal" : "Stripe"}’s secure page. Card and bank details never touch this app.
               </Notice>
             )}
           </Card>

@@ -36,8 +36,6 @@ test("capture", async ({ page }, info) => {
   const receipt = await page.getByRole("link", { name: /Receipt/ }).first().getAttribute("href");
   await page.goto(receipt!);
   await shot(page, "13-receipt", p);
-  await page.context().clearCookies();
-
   await page.goto("/maintenance");
   await shot(page, "15-resident-repairs", p);
   await page.getByRole("link", { name: "Bathroom sink is leaking" }).click();
@@ -45,6 +43,7 @@ test("capture", async ({ page }, info) => {
   await page.goto("/maintenance/new");
   await shot(page, "17-resident-report-problem", p);
   await page.context().clearCookies();
+
 
   await signIn(page, "denise.carter@legacy.demo", "ResidentDemo2026!");
   await shot(page, "14-resident-home-overdue", p, false);

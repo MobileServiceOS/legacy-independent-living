@@ -11,8 +11,10 @@ The portal is a standard Next.js 15 server app + PostgreSQL. It does **not** run
 |---|---|
 | `DATABASE_URL` | managed Postgres URL (with `?sslmode=require` if needed) |
 | `APP_URL` | `https://portal.legacyindependentliving.net` |
-| `PAYMENTS_PROVIDER` | `stripe` (mock is blocked in production) |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` | from the Stripe dashboard |
+| `PAYMENTS_PROVIDER` | `paypal` (mock is blocked in production) |
+| `PAYPAL_ENV` | `sandbox` while testing, then `live` |
+| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | developer.paypal.com → Apps & Credentials |
+| `PAYPAL_WEBHOOK_ID` | the ID of the webhook created in step 6 |
 | `CRON_SECRET` | `openssl rand -hex 32` |
 | `STORAGE_DIR` | path on the persistent volume |
 
@@ -41,10 +43,16 @@ curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://portal.legacyi
 ```
 (Vercel: add a cron in `vercel.json` hitting `/api/cron/rent`; it sends a GET with the bearer header when `CRON_SECRET` is set.)
 
-## 6. Stripe
-1. Enable **Cards** and **ACH Direct Debit (US bank account)** in the Stripe dashboard.
-2. Webhook endpoint `https://<domain>/api/webhooks/stripe` with events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`.
-3. Test with `sk_test_…` keys first (the admin shows "Stripe test mode").
+## 6. PayPal
+1. Use a **PayPal Business** account. At developer.paypal.com → **Apps & Credentials**, create an app (Sandbox first, then Live) and copy the Client ID + Secret.
+2. In the app, **Add webhook**: URL `https://<domain>/api/webhooks/paypal`, events
+   `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.PENDING`, `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.DECLINED`, `PAYMENT.CAPTURE.REFUNDED`, `PAYMENT.CAPTURE.REVERSED`, `CHECKOUT.ORDER.VOIDED`. Copy its **Webhook ID** into `PAYPAL_WEBHOOK_ID`.
+3. Test end to end with a sandbox buyer account (Sandbox → Accounts): pay rent, confirm the receipt and $0 balance, then refund from the owner portal.
+4. Switch to live: `PAYPAL_ENV=live` + live Client ID/Secret/Webhook ID.
+
+How it works: the resident is sent to PayPal, pays with PayPal balance, bank, or a debit/credit card (no PayPal account needed), and is returned to `/api/pay/return`, which **captures the payment server-side** and posts it to the ledger. Webhooks are the backup if the resident closes the tab. Refunds from the owner portal go straight to PayPal.
+
+(Stripe is still supported as an alternative: `PAYMENTS_PROVIDER=stripe` with `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`.)
 
 ## 7. DNS
 `portal.legacyindependentliving.net` → CNAME to the host. Keep the marketing site on GitHub Pages at the apex domain.

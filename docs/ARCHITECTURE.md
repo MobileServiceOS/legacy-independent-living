@@ -66,6 +66,7 @@ Processor ─ webhook ─▶ /api/webhooks/stripe ─▶ verify signature ─▶
 Admin ─ Record offline payment ─▶ SUCCEEDED OFFLINE payment + ledger + audit (recorded_by)
 ```
 
+- **PayPal (production)**: `src/lib/payments/paypal.ts` — Orders v2 with `intent: CAPTURE`, `custom_id` = our payment id, `invoice_id` = receipt number (PayPal rejects duplicates). Return URL `/api/pay/return` captures server-side (idempotent `PayPal-Request-Id`; handles already-captured). Capture `COMPLETED` → succeeded, `PENDING` (eCheck) → processing, `DECLINED` → failed. After capture, `provider_ref` becomes the **capture id**, which refunds use. Webhooks verified through PayPal's `verify-webhook-signature` API (cert URL pinned to paypal.com); cancel URL `/api/pay/cancel` closes the pending payment.
 - **Adding a processor**: implement `PaymentProvider` (`createCheckout`, `refund`, `parseWebhook`) and register it in `src/lib/payments/index.ts`.
 - **Stripe setup**: `PAYMENTS_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; webhook events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`.
 - **Autopay (architecture)**: `payment_methods` stores processor tokens with `autopay_enabled`; an autopay job would call a provider `chargeSavedMethod()` for residents with a due balance and feed the result through `applyProviderEvent()` — the same settlement path as every other payment.

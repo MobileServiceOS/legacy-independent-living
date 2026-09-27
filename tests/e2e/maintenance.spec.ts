@@ -44,10 +44,10 @@ test("report → schedule → resident sees visit", async ({ page, browser }) =>
   await owner.getByLabel("Status", { exact: true }).selectOption("SCHEDULED");
   await owner.getByLabel("Visit date & time").fill("2026-09-29T10:00");
   await owner.getByLabel("Assigned to").fill("Sam the electrician");
-  await owner.getByLabel("Note").fill("Sam will replace the fixture.");
+  await owner.getByLabel("Note", { exact: true }).fill("Sam will replace the fixture.");
   await owner.getByRole("button", { name: "Save update" }).click();
   await expect(owner.getByText("Request updated.")).toBeVisible();
-  await owner.getByLabel("Note").fill("Fixture is $35");
+  await owner.getByLabel("Note", { exact: true }).fill("Fixture is $35");
   await owner.getByLabel("Staff-only note").check();
   await owner.getByRole("button", { name: "Save update" }).click();
   await expect(owner.getByText("Fixture is $35")).toBeVisible();

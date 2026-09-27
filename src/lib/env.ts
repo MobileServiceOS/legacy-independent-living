@@ -14,13 +14,23 @@ export const env = {
   get appUrl() {
     return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
   },
-  /** "mock" (default, sandbox) or "stripe". */
-  get paymentsProvider(): "mock" | "stripe" {
+  /** "mock" (default, sandbox), "paypal", or "stripe". */
+  get paymentsProvider(): "mock" | "paypal" | "stripe" {
     const v = (process.env.PAYMENTS_PROVIDER ?? "mock").toLowerCase();
-    if (v !== "mock" && v !== "stripe") throw new Error(`PAYMENTS_PROVIDER must be "mock" or "stripe"`);
+    if (v !== "mock" && v !== "stripe" && v !== "paypal") throw new Error(`PAYMENTS_PROVIDER must be "mock", "paypal" or "stripe"`);
     if (v === "mock" && process.env.NODE_ENV === "production" && process.env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION !== "true")
       throw new Error("Mock payments are disabled in production. Set PAYMENTS_PROVIDER=stripe.");
     return v;
+  },
+  get paypal() {
+    const envName = (process.env.PAYPAL_ENV ?? "sandbox").toLowerCase();
+    if (envName !== "sandbox" && envName !== "live") throw new Error(`PAYPAL_ENV must be "sandbox" or "live"`);
+    return {
+      clientId: required("PAYPAL_CLIENT_ID"),
+      clientSecret: required("PAYPAL_CLIENT_SECRET"),
+      webhookId: process.env.PAYPAL_WEBHOOK_ID ?? "",
+      env: envName as "sandbox" | "live",
+    };
   },
   get stripeSecretKey() {
     return required("STRIPE_SECRET_KEY");

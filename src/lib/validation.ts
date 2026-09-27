@@ -220,7 +220,7 @@ export const offlinePaymentSchema = z.object({
 
 export const onlinePaymentSchema = z.object({
   amount: dollars(),
-  method: z.enum(["ACH", "DEBIT_CARD", "CREDIT_CARD"]),
+  method: z.enum(["PAYPAL", "ACH", "DEBIT_CARD", "CREDIT_CARD"], { errorMap: () => ({ message: "Choose how you'd like to pay" }) }),
 });
 
 export const refundSchema = z.object({ paymentId: id, reason: required("Reason", 300) });

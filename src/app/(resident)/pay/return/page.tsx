@@ -10,17 +10,24 @@ import { prisma } from "@/lib/db";
 export const metadata: Metadata = { title: "Payment status" };
 export const dynamic = "force-dynamic";
 
-export default async function PaymentReturn({ searchParams }: { searchParams: Promise<{ payment?: string }> }) {
+export default async function PaymentReturn({ searchParams }: { searchParams: Promise<{ payment?: string; confirming?: string }> }) {
   const user = await requireResidentPage();
-  const { payment: paymentId } = await searchParams;
+  const { payment: paymentId, confirming } = await searchParams;
   if (!paymentId) notFound();
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
   if (!payment || payment.residentId !== user.residentId) notFound();
 
   const view = {
     SUCCEEDED: { icon: "check", tone: "bg-ok-bg text-ok", title: "Payment successful", body: `Thank you! We received ${formatCents(payment.amountCents)}.` },
-    PROCESSING: { icon: "clock", tone: "bg-info-bg text-info", title: "Bank payment submitted", body: `Your ${formatCents(payment.amountCents)} bank payment is processing. It usually clears in 3–5 business days — we'll let you know.` },
-    PENDING: { icon: "clock", tone: "bg-paper-2 text-muted", title: "Confirming your payment…", body: "This usually takes a few seconds. This page will refresh." },
+    PROCESSING: { icon: "clock", tone: "bg-info-bg text-info", title: "Payment submitted", body: `Your ${formatCents(payment.amountCents)} payment is still clearing (bank payments can take 3–5 business days). We'll let you know when it's done.` },
+    PENDING: {
+      icon: "clock",
+      tone: "bg-paper-2 text-muted",
+      title: "Confirming your payment…",
+      body: confirming
+        ? "We're still confirming with PayPal. If money was taken, your payment will appear shortly — no need to pay again."
+        : "This usually takes a few seconds. This page will refresh.",
+    },
     FAILED: { icon: "alert", tone: "bg-bad-bg text-bad", title: "Payment didn't go through", body: `${payment.failureReason ?? "The payment was declined."} Your balance has not changed.` },
     CANCELED: { icon: "x", tone: "bg-paper-2 text-muted", title: "Payment canceled", body: "Nothing was charged." },
     REFUNDED: { icon: "receipt", tone: "bg-partial-bg text-partial", title: "Payment refunded", body: "This payment was refunded." },

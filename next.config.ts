@@ -11,7 +11,7 @@ const csp = [
   `connect-src 'self'${isDev ? " ws:" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
-  "form-action 'self' https://checkout.stripe.com",
+  "form-action 'self' https://www.paypal.com https://www.sandbox.paypal.com https://checkout.stripe.com",
   "object-src 'none'",
   ...(isDev ? [] : ["upgrade-insecure-requests"]),
 ].join("; ");

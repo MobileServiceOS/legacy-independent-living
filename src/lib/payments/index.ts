@@ -1,5 +1,6 @@
 import { env } from "../env";
 import { MockPaymentProvider } from "./mock";
+import { PayPalPaymentProvider } from "./paypal";
 import type { PaymentProvider } from "./provider";
 import { StripePaymentProvider } from "./stripe";
 
@@ -7,10 +8,13 @@ let cached: PaymentProvider | null = null;
 
 export function getPaymentProvider(): PaymentProvider {
   if (cached) return cached;
+  const which = env.paymentsProvider;
   cached =
-    env.paymentsProvider === "stripe"
-      ? new StripePaymentProvider(env.stripeSecretKey, env.stripeWebhookSecret)
-      : new MockPaymentProvider();
+    which === "paypal"
+      ? new PayPalPaymentProvider(env.paypal)
+      : which === "stripe"
+        ? new StripePaymentProvider(env.stripeSecretKey, env.stripeWebhookSecret)
+        : new MockPaymentProvider();
   return cached;
 }
 

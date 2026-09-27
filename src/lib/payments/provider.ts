@@ -1,7 +1,7 @@
 /**
  * Payment-provider abstraction. The app NEVER touches card numbers or bank
  * credentials: providers host the checkout page and we only store their
- * opaque references (session / payment-intent ids, brand, last4).
+ * opaque references (order / capture ids, brand, last4).
  *
  * To add a processor: implement PaymentProvider and register it in
  * getPaymentProvider() (src/lib/payments/index.ts).
@@ -9,8 +9,8 @@
 import type { Cents } from "../../domain/money.ts";
 import type { PaymentMethodType } from "../../domain/payments.ts";
 
-export type ProviderName = "MOCK" | "STRIPE";
-export type OnlineMethod = Extract<PaymentMethodType, "ACH" | "DEBIT_CARD" | "CREDIT_CARD">;
+export type ProviderName = "MOCK" | "STRIPE" | "PAYPAL";
+export type OnlineMethod = Extract<PaymentMethodType, "PAYPAL" | "ACH" | "DEBIT_CARD" | "CREDIT_CARD">;
 
 export interface CheckoutRequest {
   paymentId: string;
@@ -18,6 +18,8 @@ export interface CheckoutRequest {
   amountCents: Cents;
   method: OnlineMethod;
   description: string;
+  /** Unique, human-readable reference shown on the processor side (our receipt number). */
+  reference?: string;
   customerEmail?: string | null;
   successUrl: string;
   cancelUrl: string;
@@ -49,7 +51,14 @@ export type ProviderEvent =
 export interface PaymentProvider {
   readonly name: ProviderName;
   readonly isSandbox: boolean;
+  /** Online methods residents can choose, in display order. */
+  readonly methods: readonly OnlineMethod[];
   createCheckout(req: CheckoutRequest): Promise<CheckoutSession>;
+  /**
+   * Called when the resident comes back from the processor (redirect flows like
+   * PayPal, where the server must capture the approved order). Returns the result.
+   */
+  completeReturn?(req: { paymentId: string; providerRef: string }): Promise<ProviderEvent>;
   refund(req: { paymentId: string; providerRef: string; amountCents: Cents }): Promise<{ refundRef: string }>;
   /** Verify + parse a raw webhook. Throws on bad signature. */
   parseWebhook(rawBody: string, headers: Headers): Promise<ProviderEvent>;

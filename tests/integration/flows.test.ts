@@ -34,6 +34,8 @@ type Mods = {
   queries: typeof import("../../src/server/queries");
   props: typeof import("../../src/server/properties");
   maint: typeof import("../../src/server/maintenance");
+  providers: typeof import("../../src/lib/payments");
+  paypal: typeof import("../../src/lib/payments/paypal");
 };
 let m: Mods;
 let actor: { id: string; email: string; role: "ADMIN" };
@@ -58,6 +60,8 @@ before(async () => {
     queries: await import("../../src/server/queries"),
     props: await import("../../src/server/properties"),
     maint: await import("../../src/server/maintenance"),
+    providers: await import("../../src/lib/payments"),
+    paypal: await import("../../src/lib/payments/paypal"),
   };
   const { hashPassword } = await import("../../src/lib/security/crypto");
   const admin = await m.prisma.user.create({
@@ -477,5 +481,96 @@ describe("maintenance requests: resident ↔ office", () => {
       m.maint.submitMaintenanceRequest({ id: jo.userId!, name: "Jo", email: jo.email, residentId: jo.id }, { category: "GENERAL", priority: "LOW", title: "x", description: "y", location: null, permissionToEnter: false, entryNotes: null }),
       /current residents/,
     );
+  });
+});
+
+describe("PayPal: checkout → return capture → ledger → webhook replay → refund", () => {
+  let user: { id: string; email: string };
+  let residentId = "";
+  const paypalCalls: string[] = [];
+  let captureStatus = "COMPLETED";
+
+  before(async () => {
+    const r = await m.prisma.resident.findFirstOrThrow({ where: { email: "pat@test.local" } });
+    residentId = r.id;
+    user = { id: r.userId!, email: r.email };
+    await m.residents.addManualLedgerEntry(actor, { residentId, kind: "OTHER_CHARGE", amount: 5000, effectiveDate: TODAY, description: "Key replacement" });
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      const path = new URL(url).pathname;
+      paypalCalls.push(`${init.method} ${path}`);
+      const body = typeof init.body === "string" && init.body.startsWith("{") ? JSON.parse(init.body) : null;
+      const ok = (json: unknown, status = 200) => new Response(JSON.stringify(json), { status });
+      if (path === "/v1/oauth2/token") return ok({ access_token: "t", expires_in: 3600 });
+      if (path === "/v2/checkout/orders") return ok({ id: `ORDER-${body.purchase_units[0].custom_id}`, links: [{ rel: "payer-action", href: "https://www.sandbox.paypal.com/checkoutnow?token=x" }] });
+      const cap = /^\/v2\/checkout\/orders\/(ORDER-[^/]+)\/capture$/.exec(path);
+      if (cap) return ok({ id: cap[1], purchase_units: [{ payments: { captures: [{ id: `CAP-${cap[1]}`, status: captureStatus }] } }] }, 201);
+      const refund = /^\/v2\/payments\/captures\/([^/]+)\/refund$/.exec(path);
+      if (refund) return ok({ id: `REF-${refund[1]}`, status: "COMPLETED" }, 201);
+      if (path === "/v1/notifications/verify-webhook-signature") return ok({ verification_status: "SUCCESS" });
+      return ok({ message: "not found" }, 404);
+    }) as unknown as typeof fetch;
+    m.providers.setPaymentProviderForTests(new m.paypal.PayPalPaymentProvider({ clientId: "c", clientSecret: "s", webhookId: "WH", env: "sandbox" }, fetchImpl));
+  });
+
+  after(() => m.providers.setPaymentProviderForTests(null));
+
+  test("only PayPal is offered; other methods refused", async () => {
+    await assert.rejects(m.payments.startOnlinePayment(user, { amount: 5000, method: "DEBIT_CARD" }), /isn't available/);
+  });
+
+  test("pay $50 via PayPal: redirect to PayPal, return captures, balance $0, capture id stored", async () => {
+    const { paymentId, redirectUrl } = await m.payments.startOnlinePayment(user, { amount: 5000, method: "PAYPAL" });
+    assert.match(redirectUrl, /^https:\/\/www\.sandbox\.paypal\.com\//);
+    let p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    assert.equal(p.provider, "PAYPAL");
+    assert.equal(p.providerRef, `ORDER-${paymentId}`);
+    assert.equal((await balanceOf(residentId)).balanceCents, 5000, "approval alone moves no money");
+
+    assert.equal(await m.payments.completeRedirectPayment(user, paymentId), "SUCCEEDED");
+    p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    assert.equal(p.providerRef, `CAP-ORDER-${paymentId}`);
+    assert.equal(p.cardBrand, "PayPal");
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
+
+    // refreshing the return URL does nothing more
+    assert.equal(await m.payments.completeRedirectPayment(user, paymentId), "SUCCEEDED");
+    assert.equal(paypalCalls.filter((c) => c.endsWith("/capture")).length, 1);
+
+    // late webhook for the same capture: no double credit
+    const provider = m.providers.getPaymentProvider();
+    const hdrs = new Headers({
+      "paypal-auth-algo": "a", "paypal-cert-url": "https://api.sandbox.paypal.com/c", "paypal-transmission-id": "t",
+      "paypal-transmission-sig": "s", "paypal-transmission-time": "now",
+    });
+    const ev = await provider.parseWebhook(JSON.stringify({ id: "WH-1", event_type: "PAYMENT.CAPTURE.COMPLETED", resource: { id: p.providerRef, custom_id: paymentId } }), hdrs);
+    await m.payments.applyProviderEvent("PAYPAL", ev);
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
+    assert.equal(await m.prisma.ledgerEntry.count({ where: { paymentId, type: "PAYMENT" } }), 1);
+
+    // refund goes to PayPal against the capture, ledger re-opens the balance
+    await m.payments.refundPayment(actor, { paymentId, reason: "Charged in error" });
+    assert.ok(paypalCalls.includes(`POST /v2/payments/captures/CAP-ORDER-${paymentId}/refund`));
+    assert.equal((await balanceOf(residentId)).balanceCents, 5000);
+  });
+
+  test("eCheck: capture PENDING → payment pending → webhook COMPLETED settles it", async () => {
+    captureStatus = "PENDING";
+    const { paymentId } = await m.payments.startOnlinePayment(user, { amount: 5000, method: "PAYPAL" });
+    assert.equal(await m.payments.completeRedirectPayment(user, paymentId), "PROCESSING");
+    assert.equal((await balanceOf(residentId)).status, "PENDING");
+    const p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    await m.payments.applyProviderEvent("PAYPAL", { kind: "succeeded", paymentId: null, providerRef: p.providerRef, eventId: "WH-ECHECK-DONE" });
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
+    captureStatus = "COMPLETED";
+  });
+
+  test("resident cancels on PayPal → payment closed, nothing charged; others can't touch it", async () => {
+    await m.residents.addManualLedgerEntry(actor, { residentId, kind: "OTHER_CHARGE", amount: 2500, effectiveDate: TODAY, description: "Fee" });
+    const { paymentId } = await m.payments.startOnlinePayment(user, { amount: 2500, method: "PAYPAL" });
+    const casey = await m.prisma.resident.findFirstOrThrow({ where: { email: "casey@test.local" } });
+    await assert.rejects(m.payments.completeRedirectPayment({ id: casey.userId! }, paymentId), /not found/);
+    await m.payments.cancelRedirectPayment(user, paymentId);
+    assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).status, "CANCELED");
+    assert.equal((await balanceOf(residentId)).balanceCents, 2500);
   });
 });

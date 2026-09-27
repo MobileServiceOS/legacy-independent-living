@@ -9,6 +9,7 @@ import { PaymentProviderError } from "./provider.ts";
 export class MockPaymentProvider implements PaymentProvider {
   readonly name = "MOCK" as const;
   readonly isSandbox = true;
+  readonly methods = ["PAYPAL", "DEBIT_CARD", "CREDIT_CARD", "ACH"] as const;
 
   async createCheckout(req: CheckoutRequest): Promise<CheckoutSession> {
     if (req.amountCents <= 0) throw new PaymentProviderError("Amount must be positive");

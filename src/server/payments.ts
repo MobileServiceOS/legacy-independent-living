@@ -52,6 +52,7 @@ export async function startOnlinePayment(
   if (!settings.onlinePaymentsEnabled) throw new UserError("Online payments are turned off right now. Please contact the office.");
   const today = businessToday(settings);
   const provider = getPaymentProvider();
+  if (!provider.methods.includes(input.method)) throw new UserError("That payment method isn't available", "method");
 
   const payment = await prisma.$transaction(async (tx) => {
     const resident = await tx.resident.findUnique({ where: { userId: user.id } });
@@ -81,9 +82,11 @@ export async function startOnlinePayment(
       amountCents: payment.amountCents,
       method: input.method,
       description: `Rent payment — ${settings.businessName}`,
+      reference: payment.receiptNumber,
       customerEmail: user.email,
-      successUrl: `${env.appUrl}/pay/return?payment=${payment.id}`,
-      cancelUrl: `${env.appUrl}/pay?canceled=1`,
+      // Redirect processors (PayPal) come back through a route that captures server-side.
+      successUrl: provider.completeReturn ? `${env.appUrl}/api/pay/return?payment=${payment.id}` : `${env.appUrl}/pay/return?payment=${payment.id}`,
+      cancelUrl: provider.completeReturn ? `${env.appUrl}/api/pay/cancel?payment=${payment.id}` : `${env.appUrl}/pay?canceled=1`,
     });
     await prisma.payment.update({ where: { id: payment.id }, data: { providerRef: session.providerRef } });
     return { paymentId: payment.id, redirectUrl: session.redirectUrl };
@@ -165,7 +168,7 @@ async function settleRefunded(tx: Tx, actor: Actor, payment: Payment, today: Dat
  * Apply a normalized provider event. Idempotent per event id (payment_events
  * has a unique index) and per payment (state machine + ledger idempotency).
  */
-export async function applyProviderEvent(providerName: "MOCK" | "STRIPE", event: ProviderEvent): Promise<{ applied: boolean; status?: PaymentStatus }> {
+export async function applyProviderEvent(providerName: "MOCK" | "STRIPE" | "PAYPAL", event: ProviderEvent): Promise<{ applied: boolean; status?: PaymentStatus }> {
   if (event.kind === "ignored") return { applied: false };
   const settings = await getSettings();
   const today = businessToday(settings);
@@ -268,13 +271,15 @@ export async function completeSandboxPayment(
   const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { resident: { select: { userId: true } } } });
   if (!payment || payment.resident.userId !== user.id) throw new NotFoundError("Payment");
   if (payment.provider !== "MOCK") throw new ForbiddenError();
-  if (outcome === "ach_pending" && payment.method !== "ACH") throw new UserError("Only bank payments can be pending");
+  if (outcome === "ach_pending" && payment.method !== "ACH" && payment.method !== "PAYPAL") throw new UserError("Only bank payments can be pending");
   const base = { paymentId, providerRef: null, eventId: `mock:${paymentId}:${outcome}` };
+  const paypal = payment.method === "PAYPAL";
+  const ach = payment.method === "ACH";
   const event: ProviderEvent =
     outcome === "succeed"
-      ? { kind: "succeeded", ...base, cardBrand: payment.method === "ACH" ? null : "Sandbox", last4: payment.method === "ACH" ? "6789" : "4242" }
+      ? { kind: "succeeded", ...base, cardBrand: ach ? null : paypal ? "PayPal" : "Sandbox", last4: ach ? "6789" : paypal ? null : "4242" }
       : outcome === "decline"
-        ? { kind: "failed", ...base, reason: payment.method === "ACH" ? "The bank declined the transfer (sandbox)" : "Card declined (sandbox)" }
+        ? { kind: "failed", ...base, reason: ach ? "The bank declined the transfer (sandbox)" : paypal ? "PayPal declined the payment (sandbox)" : "Card declined (sandbox)" }
         : outcome === "ach_pending"
           ? { kind: "processing", ...base }
           : { kind: "canceled", ...base };
@@ -378,4 +383,35 @@ export async function refundPayment(actor: Actor, input: { paymentId: string; re
 
 function assertTransitionOrUserError(from: PaymentStatus, to: PaymentStatus) {
   if (!canTransition(from, to)) throw new UserError(`A ${from.toLowerCase()} payment can't be ${to.toLowerCase()}`);
+}
+
+// ------------------------------------------------------------------ redirect processors (PayPal)
+
+/**
+ * Resident returned from the processor: capture server-side and settle.
+ * Idempotent — refreshing the return URL, or a webhook arriving first, is harmless.
+ */
+export async function completeRedirectPayment(user: { id: string }, paymentId: string): Promise<PaymentStatus> {
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { resident: { select: { userId: true } } } });
+  if (!payment || payment.resident.userId !== user.id) throw new NotFoundError("Payment");
+  if (payment.status !== "PENDING") return payment.status; // already settled (webhook or earlier return)
+  const provider = getPaymentProvider();
+  if (provider.name !== payment.provider || !provider.completeReturn || !payment.providerRef) throw new UserError("This payment can't be completed here");
+  let event: ProviderEvent;
+  try {
+    event = await provider.completeReturn({ paymentId: payment.id, providerRef: payment.providerRef });
+  } catch (err) {
+    console.error("[payments] capture failed", err);
+    throw new UserError("We couldn't confirm your payment with PayPal yet. If money was taken, it will show up shortly.");
+  }
+  const result = await applyProviderEvent(provider.name, event);
+  return result.status ?? (await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status;
+}
+
+/** Resident backed out on the processor's page: close the pending payment. */
+export async function cancelRedirectPayment(user: { id: string }, paymentId: string): Promise<void> {
+  const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { resident: { select: { userId: true } } } });
+  if (!payment || payment.resident.userId !== user.id || payment.status !== "PENDING") return;
+  if (payment.provider === "OFFLINE") return;
+  await applyProviderEvent(payment.provider, { kind: "canceled", paymentId: payment.id, providerRef: null, eventId: `return:${payment.id}:canceled` });
 }

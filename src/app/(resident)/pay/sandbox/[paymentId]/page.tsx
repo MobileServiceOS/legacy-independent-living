@@ -60,7 +60,10 @@ export default async function SandboxCheckout({ params }: { params: Promise<{ pa
               <Outcome paymentId={payment.id} outcome="succeed" label="Simulate: bank payment clears instantly" variant="secondary" />
             </>
           ) : (
-            <Outcome paymentId={payment.id} outcome="succeed" label={`Pay ${formatCents(payment.amountCents)}`} variant="primary" />
+            <>
+              <Outcome paymentId={payment.id} outcome="succeed" label={`Pay ${formatCents(payment.amountCents)}`} variant="primary" />
+              {payment.method === "PAYPAL" ? <Outcome paymentId={payment.id} outcome="ach_pending" label="Simulate: PayPal eCheck pending" variant="secondary" /> : null}
+            </>
           )}
           <Outcome paymentId={payment.id} outcome="decline" label="Simulate: payment declined" variant="danger" />
           <Outcome paymentId={payment.id} outcome="cancel" label="Cancel and go back" variant="secondary" />

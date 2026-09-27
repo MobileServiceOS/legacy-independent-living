@@ -81,6 +81,7 @@ export function mapStripeEvent(event: { id: string; type: string; data: { object
 export class StripePaymentProvider implements PaymentProvider {
   readonly name = "STRIPE" as const;
   readonly isSandbox: boolean;
+  readonly methods = ["DEBIT_CARD", "CREDIT_CARD", "ACH"] as const;
   private readonly secretKey: string;
   private readonly webhookSecret: string;
   private readonly fetchImpl: typeof fetch;

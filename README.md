@@ -101,8 +101,8 @@ Full details — schema, routes, auth model, payment architecture, rent engine, 
 - Rent charges are generated with idempotency keys (`rent:<resident>:<YYYY-MM>`), so the engine can run any number of times.
 
 ### Payments
-- Provider interface (`src/lib/payments/provider.ts`) with two implementations:
-  **Mock** (sandbox checkout inside the app; refused in production) and **Stripe Checkout** (cards + ACH `us_bank_account`).
+- Provider interface (`src/lib/payments/provider.ts`) with three implementations:
+  **PayPal** (production — PayPal balance, bank, or debit/credit card as guest; server-side capture), **Mock** (sandbox checkout inside the app; refused in production), and **Stripe** (alternative).
 - Card and bank details are entered on the processor's hosted page. The database stores only opaque references, brand and last 4 (a CHECK constraint rejects anything that isn't 4 digits).
 - A payment only hits the ledger on **SUCCEEDED**; pending ACH shows as *Payment pending*; refunds post a `REFUND` entry.
 - Webhooks are signature-verified (raw body, 5-min tolerance, constant-time compare) and de-duplicated by event id.

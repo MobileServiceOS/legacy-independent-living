@@ -76,12 +76,14 @@ enum PaymentMethodType {
   MONEY_ORDER
   CHECK
   EXTERNAL
+  PAYPAL
 }
 
 enum PaymentProviderName {
   MOCK
   STRIPE
   OFFLINE
+  PAYPAL
 }
 
 enum DocumentKind {
