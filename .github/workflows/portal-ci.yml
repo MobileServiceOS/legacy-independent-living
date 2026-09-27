@@ -32,8 +32,12 @@ jobs:
       PAYMENTS_PROVIDER: mock
       CRON_SECRET: ci-secret
       NEXT_TELEMETRY_DISABLED: "1"
+    defaults:
+      run:
+        shell: bash -eo pipefail {0}
     steps:
       - uses: actions/checkout@v4
+      - run: mkdir -p ci-logs
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -59,25 +63,39 @@ jobs:
         env:
           PGPASSWORD: legacy
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run typecheck 2>&1 | tee ci-logs/typecheck.log
       - name: Lint
-        run: npm run lint
+        id: lint
+        continue-on-error: true
+        run: npm run lint 2>&1 | tee ci-logs/lint.log
       - name: Unit tests
-        run: npm run test:unit
+        id: unit
+        continue-on-error: true
+        run: npm run test:unit 2>&1 | tee ci-logs/unit-tests.log
       - name: Database integrity tests
-        run: npm run test:db
+        id: db
+        continue-on-error: true
+        run: npm run test:db 2>&1 | tee ci-logs/database-integrity-tests.log
       - name: Integration tests
-        run: npm run test:integration
+        id: integration
+        continue-on-error: true
+        run: npm run test:integration 2>&1 | tee ci-logs/integration-tests.log
       - name: Build
-        run: npm run build
+        run: npm run build 2>&1 | tee ci-logs/build.log
       - name: Seed smoke test
-        run: npx prisma migrate reset --force
+        run: npx prisma migrate reset --force 2>&1 | tee ci-logs/seed-smoke-test.log
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       - name: End-to-end tests
-        run: npm run test:e2e
+        run: npm run test:e2e 2>&1 | tee ci-logs/end-to-end-tests.log
         env:
           CI: "true"
+      - name: Annotate failures
+        if: failure() || steps.lint.outcome == 'failure' || steps.unit.outcome == 'failure' || steps.db.outcome == 'failure' || steps.integration.outcome == 'failure'
+        run: node scripts/ci-annotate.mjs ci-logs/*.log
+      - name: Fail if any check failed
+        if: steps.lint.outcome == 'failure' || steps.unit.outcome == 'failure' || steps.db.outcome == 'failure' || steps.integration.outcome == 'failure'
+        run: exit 1
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
