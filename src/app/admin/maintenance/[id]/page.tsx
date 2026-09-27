@@ -83,7 +83,7 @@ export default async function StaffMaintenancePage({ params }: { params: Promise
             {req.status === "CANCELED" ? (
               <p className="text-muted">This request was canceled and is closed.</p>
             ) : (
-              <ActionForm action={staffMaintenanceUpdateAction} className="space-y-4" resetOnSuccess>
+              <ActionForm action={staffMaintenanceUpdateAction} className="space-y-4" resetOnSuccess resetKey={req.updatedAt.toISOString()}>
                 <Hidden name="requestId" value={req.id} />
                 <Select
                   name="status"

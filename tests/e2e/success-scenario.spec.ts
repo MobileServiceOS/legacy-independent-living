@@ -21,6 +21,11 @@ async function login(page: Page, email: string, password: string) {
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
 
+/** Submit buttons stay disabled until React hydrates — wait for that before touching <select>s. */
+async function ready(page: Page) {
+  await expect(page.locator("main button[type=submit]").first()).toBeEnabled();
+}
+
 async function logout(page: Page) {
   await page.getByRole("button", { name: "Sign out" }).first().click();
   await expect(page).toHaveURL(/\/login/);
@@ -43,10 +48,12 @@ test("apply → approve → convert → sign in → pay → receipt → $0", asy
   await page.getByRole("link", { name: /^Applications/ }).first().click();
   await page.getByRole("link", { name: `${applicant.first} ${applicant.last}` }).click();
   await expect(page).toHaveURL(/\/admin\/applications\/[^/?]+$/);
+  await ready(page);
   await page.getByLabel("Status", { exact: true }).selectOption("APPROVED");
   await page.getByRole("button", { name: "Save review" }).click();
   await expect(page.getByText("Application updated.")).toBeVisible();
   await page.reload();
+  await ready(page);
 
   // 3. Convert to resident: Legacy House #1 · Room 3, $750/month, Oct 1 move-in, due day 1
   const room3 = await page.locator("option", { hasText: "Legacy House #1 · Room 3" }).getAttribute("value");

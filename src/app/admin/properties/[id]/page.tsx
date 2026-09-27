@@ -99,7 +99,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ id: s
                         {room.resident ? (
                           <p className="text-sm text-muted">Status is “Occupied” while a resident is assigned. Transfer or move them out to change it.</p>
                         ) : (
-                          <ActionForm action={setRoomStatusAction} className="space-y-3">
+                          <ActionForm action={setRoomStatusAction} className="space-y-3" resetKey={room.updatedAt.toISOString()}>
                             <Hidden name="roomId" value={room.id} />
                             <Select name="status" label="Room status" defaultValue={room.status === "OCCUPIED" ? "AVAILABLE" : room.status} options={MANUAL_ROOM_STATUSES.map((s) => ({ value: s, label: ROOM_STATUS_LABELS[s] }))} />
                             <SubmitButton small variant="secondary">

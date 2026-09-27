@@ -361,7 +361,7 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
           {active ? (
             <>
               <Disclosure summary="Edit resident">
-                <ActionForm action={updateResidentAction} className="space-y-3">
+                <ActionForm action={updateResidentAction} className="space-y-3" resetKey={r.updatedAt.toISOString()}>
                   <Hidden name="residentId" value={r.id} />
                   <Input name="firstName" label="First name" defaultValue={r.firstName} required />
                   <Input name="lastName" label="Last name" defaultValue={r.lastName} required />
@@ -393,7 +393,7 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
               </Disclosure>
 
               <Disclosure summary="Change rent">
-                <ActionForm action={changeRentAction} className="space-y-3">
+                <ActionForm action={changeRentAction} className="space-y-3" resetKey={schedule?.id ?? "none"}>
                   <Hidden name="residentId" value={r.id} />
                   <MoneyInput name="monthlyRent" label="New monthly rent" defaultValue={schedule ? centsToInput(schedule.monthlyRentCents) : undefined} required />
                   <Input name="dueDay" type="number" inputMode="numeric" min={1} max={28} label="Rent due day" defaultValue={schedule?.dueDay ?? 1} required />

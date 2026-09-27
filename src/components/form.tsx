@@ -4,7 +4,7 @@
  * - Keeps what the user typed after a validation error (echoed values + remount).
  * - Shows field-level errors next to the right input, announced to screen readers.
  */
-import { createContext, useActionState, useContext, useId, useState, type ReactNode } from "react";
+import { createContext, useActionState, useContext, useEffect, useId, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import type { ActionState } from "@/lib/actions";
 
@@ -17,6 +17,7 @@ export function ActionForm({
   children,
   className,
   resetOnSuccess = false,
+  resetKey,
   copyResult,
   linkResult,
 }: {
@@ -24,6 +25,12 @@ export function ActionForm({
   children: ReactNode;
   className?: string;
   resetOnSuccess?: boolean;
+  /**
+   * Server-side version of the record being edited (e.g. updatedAt). When it
+   * changes, fields remount with the fresh defaults — so a form never submits a
+   * stale status after the page refreshes.
+   */
+  resetKey?: string;
   /** After success, show state.data[key] in a copyable field (e.g. an invite link). */
   copyResult?: { key: string; label: string };
   /** After success, show a link to state.data[key]. */
@@ -45,7 +52,7 @@ export function ActionForm({
             {state.message}
           </div>
         ) : null}
-        <div key={state.ok && resetOnSuccess ? `ok-${state.version}` : "stable"} className="contents">
+        <div key={`${resetKey ?? ""}|${state.ok && resetOnSuccess ? state.version : "stable"}`} className="contents">
           {children}
         </div>
         {state.ok && copyResult && state.data?.[copyResult.key] ? (
@@ -278,10 +285,17 @@ export function Hidden({ name, value }: { name: string; value: string }) {
   return <input type="hidden" name={name} value={value} />;
 }
 
+function useHydrated() {
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
+  return hydrated;
+}
+
 export function SubmitButton({ children, variant = "primary", className, pendingText, small }: { children: ReactNode; variant?: "primary" | "secondary" | "danger"; className?: string; pendingText?: string; small?: boolean }) {
   const { pending } = useFormStatus();
+  const hydrated = useHydrated();
   return (
-    <button type="submit" disabled={pending} aria-busy={pending} className={`btn-${variant} ${small ? "btn-sm" : ""} ${className ?? ""}`}>
+    <button type="submit" disabled={pending || !hydrated} aria-busy={pending} className={`btn-${variant} ${small ? "btn-sm" : ""} ${className ?? ""}`}>
       {pending ? (
         <>
           <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" aria-hidden />

@@ -16,6 +16,11 @@ async function signIn(page: Page, email: string, password: string) {
   await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
 
+/** Submit buttons stay disabled until React hydrates — wait for that before touching <select>s. */
+async function ready(page: Page) {
+  await expect(page.locator("main button[type=submit]").first()).toBeEnabled();
+}
+
 test("report → schedule → resident sees visit", async ({ page, browser }) => {
   const title = `Kitchen light flickers ${Date.now().toString(36)}`;
 
@@ -23,6 +28,7 @@ test("report → schedule → resident sees visit", async ({ page, browser }) =>
   await signIn(page, "gloria.james@legacy.demo", "ResidentDemo2026!");
   await page.getByRole("link", { name: "Repairs" }).first().click();
   await page.getByTestId("report-problem").click();
+  await ready(page);
   await page.getByLabel("What kind of problem is it?").selectOption("ELECTRICAL");
   await page.getByLabel("In a few words, what's wrong?").fill(title);
   await page.getByLabel("Tell us more").fill("Flickers every few seconds since yesterday.");
@@ -41,16 +47,19 @@ test("report → schedule → resident sees visit", async ({ page, browser }) =>
   await signIn(owner, "owner@legacy.demo", "LegacyDemo2026!");
   await owner.goto("/admin/maintenance");
   await owner.getByRole("link", { name: title }).click();
+  await ready(owner);
   await owner.getByLabel("Status", { exact: true }).selectOption("SCHEDULED");
   await owner.getByLabel("Visit date & time").fill("2026-09-29T10:00");
   await owner.getByLabel("Assigned to").fill("Sam the electrician");
   await owner.getByLabel("Note", { exact: true }).fill("Sam will replace the fixture.");
   await owner.getByRole("button", { name: "Save update" }).click();
   await expect(owner.getByText("Request updated.")).toBeVisible();
+  await expect(owner.getByText("Scheduled").first()).toBeVisible();
+  await ready(owner);
   await owner.getByLabel("Note", { exact: true }).fill("Fixture is $35");
   await owner.getByLabel("Staff-only note").check();
   await owner.getByRole("button", { name: "Save update" }).click();
-  await expect(owner.getByText("Fixture is $35")).toBeVisible();
+  await expect(owner.getByText("Staff only")).toBeVisible();
   await owner.close();
 
   // Resident sees the visit, not the staff-only note

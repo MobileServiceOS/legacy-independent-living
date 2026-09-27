@@ -94,7 +94,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
             {app.status === "CONVERTED" ? (
               <p className="text-muted">Converted applications are closed.</p>
             ) : (
-              <ActionForm action={setApplicationStatusAction} className="space-y-4">
+              <ActionForm action={setApplicationStatusAction} className="space-y-4" resetKey={app.updatedAt.toISOString()}>
                 <Hidden name="applicationId" value={app.id} />
                 <Select
                   name="status"
