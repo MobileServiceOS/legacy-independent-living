@@ -82,7 +82,8 @@ test("apply → approve → convert → sign in → pay → receipt → $0", asy
   // 6. Receipt
   await page.getByRole("link", { name: "View receipt" }).click();
   await expect(page.getByTestId("receipt-amount")).toHaveText("$750.00");
-  await expect(page.getByText(/LIL-20260927-/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Receipt LIL-20260927-/ })).toBeAttached();
+  await expect(page.locator("dd", { hasText: /^LIL-20260927-[2-9A-HJ-NP-Z]{6}$/ })).toBeVisible();
 
   // 7. Balance is $0 and the ledger shows both lines
   await page.goto("/home");
