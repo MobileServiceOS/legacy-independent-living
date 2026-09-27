@@ -13,6 +13,7 @@ import {
   PageHeader,
   PaymentStatusBadge,
   RentStatusBadge,
+  RunningBalance,
   Stat,
   TableWrap,
 } from "@/components/ui";
@@ -234,7 +235,7 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
                           <Money cents={l.amountCents} signed />
                         </td>
                         <td className="text-right tabular-nums">
-                          <Money cents={l.runningBalanceCents} />
+                          <RunningBalance cents={l.runningBalanceCents} />
                         </td>
                       </tr>
                     ))}

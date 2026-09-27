@@ -100,6 +100,11 @@ export function Money({ cents, className, signed }: { cents: number; className?:
   return <span className={cx("tabular-nums", className)}>{formatCents(cents, { signed })}</span>;
 }
 
+/** Running balance: negative balances read as a credit rather than a minus sign. */
+export function RunningBalance({ cents }: { cents: number }) {
+  return cents < 0 ? <span className="tabular-nums text-ok">{formatCents(-cents)} credit</span> : <Money cents={cents} />;
+}
+
 export function PageHeader({ title, eyebrow, description, actions }: { title: string; eyebrow?: string; description?: ReactNode; actions?: ReactNode }) {
   return (
     <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

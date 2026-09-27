@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Card, EmptyState, Money, PaymentStatusBadge } from "@/components/ui";
+import { Card, EmptyState, Money, PaymentStatusBadge, RunningBalance } from "@/components/ui";
 import { formatShort } from "@/domain/dates";
 import { LEDGER_TYPE_LABELS, withRunningBalance } from "@/domain/ledger";
 import { PAYMENT_METHOD_LABELS } from "@/domain/payments";
@@ -74,7 +74,7 @@ export default async function PaymentsPage() {
                     <Money cents={l.amountCents} signed />
                   </p>
                   <p className="text-xs text-muted">
-                    Balance <Money cents={l.runningBalanceCents} />
+                    Balance <RunningBalance cents={l.runningBalanceCents} />
                   </p>
                 </div>
               </li>
