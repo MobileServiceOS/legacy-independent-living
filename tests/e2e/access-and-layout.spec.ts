@@ -12,6 +12,12 @@ async function login(page: Page, u: { email: string; password: string }) {
   await page.getByRole("button", { name: "Sign in" }).click();
 }
 
+/** Sign in and wait until the session cookie is set and we've left /login. */
+async function signIn(page: Page, u: { email: string; password: string }) {
+  await login(page, u);
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
+}
+
 async function expectNoHorizontalScroll(page: Page) {
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBeLessThanOrEqual(1);
@@ -30,7 +36,7 @@ test("wrong password shows a generic error", async ({ page }) => {
 });
 
 test("resident sees only their own world", async ({ page }) => {
-  await login(page, RESIDENT);
+  await signIn(page, RESIDENT);
   await expect(page).toHaveURL(/\/home$/);
   await expect(page.getByText("Due soon").first()).toBeVisible();
   await expect(page.getByTestId("pay-rent")).toBeVisible();
@@ -49,7 +55,7 @@ test("resident sees only their own world", async ({ page }) => {
 test("receipts are private to their resident", async ({ browser }) => {
   // Find one of Marcus's receipt URLs as Marcus…
   const marcus = await browser.newPage();
-  await login(marcus, OTHER_RESIDENT);
+  await signIn(marcus, OTHER_RESIDENT);
   await marcus.goto("/payments");
   const href = await marcus.getByRole("link", { name: /Receipt/ }).first().getAttribute("href");
   expect(href).toMatch(/^\/receipts\//);
@@ -57,14 +63,14 @@ test("receipts are private to their resident", async ({ browser }) => {
 
   // …then try it as Angela.
   const angela = await browser.newPage();
-  await login(angela, RESIDENT);
+  await signIn(angela, RESIDENT);
   const res = await angela.goto(href!);
   expect(res?.status()).toBe(404);
   await angela.close();
 });
 
 test("admin screens fit the viewport", async ({ page }) => {
-  await login(page, ADMIN);
+  await signIn(page, ADMIN);
   for (const path of ["/admin", "/admin/properties", "/admin/residents", "/admin/applications", "/admin/payments", "/admin/reports", "/admin/settings"]) {
     await page.goto(path);
     await expect(page.locator("h1")).toBeVisible();

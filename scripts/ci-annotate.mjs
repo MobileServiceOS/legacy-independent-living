@@ -16,6 +16,12 @@ for (const file of process.argv.slice(2)) {
   const lines = stripAnsi(readFileSync(file, "utf8")).split("\n");
   // The Checks API keeps ~4 KB per annotation, so send the tail (where test
   // reporters print their failure summary) in 3.9 KB chunks, last chunk first.
+  // Playwright: first annotation = every failure header + its first error lines.
+  const summary = [];
+  lines.forEach((l, i) => {
+    if (/^\s+\d+\) \[/.test(l)) summary.push(...lines.slice(i, i + 8).filter((x) => x.trim() && !/^\s+(at |attachment|─)/.test(x)), "");
+  });
+  if (summary.length) console.log(`::error title=${basename(file)} [failures]::${escape(summary.join("\n").slice(0, 3900))}`);
   const text = lines.join("\n");
   const chunks = [];
   for (let end = text.length; end > 0 && chunks.length < 2; end -= 3900) chunks.push(text.slice(Math.max(0, end - 3900), end));

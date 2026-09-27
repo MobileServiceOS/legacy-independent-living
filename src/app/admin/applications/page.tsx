@@ -34,7 +34,7 @@ export default async function ApplicationsPage({ searchParams }: { searchParams:
           </>
         }
       />
-      <nav aria-label="Application status" className="mb-5 flex gap-2 overflow-x-auto pb-1">
+      <nav aria-label="Filter applications" className="mb-5 flex gap-2 overflow-x-auto pb-1">
         {TABS.map((t) => (
           <Link
             key={t}

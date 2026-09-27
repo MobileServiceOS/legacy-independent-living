@@ -18,6 +18,7 @@ async function login(page: Page, email: string, password: string) {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(password);
   await page.getByRole("button", { name: "Sign in" }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"));
 }
 
 async function logout(page: Page) {
@@ -41,7 +42,8 @@ test("apply → approve → convert → sign in → pay → receipt → $0", asy
   await expect(page).toHaveURL(/\/admin$/);
   await page.getByRole("link", { name: /^Applications/ }).first().click();
   await page.getByRole("link", { name: `${applicant.first} ${applicant.last}` }).click();
-  await page.getByLabel("Status").selectOption("APPROVED");
+  await expect(page).toHaveURL(/\/admin\/applications\/[^/?]+$/);
+  await page.getByLabel("Status", { exact: true }).selectOption("APPROVED");
   await page.getByRole("button", { name: "Save review" }).click();
   await expect(page.getByText("Application updated.")).toBeVisible();
   await page.reload();
