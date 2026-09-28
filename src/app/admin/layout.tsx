@@ -27,9 +27,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/settings", label: "Settings", icon: "cog" },
   ];
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
-      <aside className="no-print bg-forest-deep pt-[env(safe-area-inset-top)] text-white lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto">
-        <div className="flex items-center justify-between gap-3 px-4 py-4 lg:block">
+    <div className="min-h-dvh md:grid md:grid-cols-[15rem_1fr] lg:grid-cols-[16rem_1fr]">
+      <aside className="no-print bg-forest-deep pt-[env(safe-area-inset-top)] text-white md:sticky md:top-0 md:h-dvh md:overflow-y-auto">
+        <div className="flex items-center justify-between gap-3 px-4 py-4 md:block">
           <Link href="/admin" className="flex items-center gap-3 text-white no-underline">
             <Image src="/brand/logo-mark.webp" alt="" width={44} height={44} className="rounded-full bg-white" />
             <span>
@@ -38,9 +38,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </span>
           </Link>
         </div>
-        <div className="px-3 pb-3 lg:pb-6">
+        <div className="px-3 pb-3 md:pb-6">
           <AdminNav items={items} />
-          <div className="mt-4 border-t border-white/15 pt-4 lg:mt-8">
+          <div className="mt-4 border-t border-white/15 pt-4 md:mt-8">
             <p className="truncate px-3 text-sm text-white/70">{user.name}</p>
             <SignOutButton action={logoutAction} label="Sign out" className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 font-bold text-white/80 hover:bg-white/10 hover:text-white" />
           </div>
@@ -53,7 +53,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             fictional examples — not real Legacy residents or properties.
           </div>
         ) : null}
-        <main id="main" className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main id="main" className="mx-auto max-w-7xl px-4 py-6 sm:px-6 md:px-6 md:py-8 lg:px-8">
           {children}
         </main>
       </div>

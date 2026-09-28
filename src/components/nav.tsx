@@ -101,8 +101,8 @@ export function AdminNav({ items }: { items: NavItem[] }) {
   );
   return (
     <>
-      <div className="hidden lg:block">{list}</div>
-      <details className="group lg:hidden">
+      <div className="hidden md:block">{list}</div>
+      <details className="group md:hidden">
         <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-3 font-bold text-white [&::-webkit-details-marker]:hidden">
           <Icon name="menu" /> Menu
         </summary>
