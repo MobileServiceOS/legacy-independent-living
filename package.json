@@ -2,7 +2,7 @@
   "name": "legacy-portal",
   "version": "1.0.0",
   "private": true,
-  "description": "Legacy Independent Living \u2014 resident & owner portal (installable PWA)",
+  "description": "Legacy Independent Living — resident & owner portal (installable PWA)",
   "type": "module",
   "engines": {
     "node": ">=22.18"
@@ -52,5 +52,9 @@
     "tailwindcss": "^4.1.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "postcss": "^8.5.23",
+    "deepmerge-ts": "^8.0.0"
   }
 }

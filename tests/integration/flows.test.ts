@@ -518,7 +518,7 @@ describe("PayPal: checkout → return capture → ledger → webhook replay → 
       const cap = /^\/v2\/checkout\/orders\/(ORDER-[^/]+)\/capture$/.exec(path);
       if (cap)
         return ok(
-          { id: cap[1], purchase_units: [{ payments: { captures: [{ id: `CAP-${cap[1]}`, status: captureStatus, amount: { currency_code: "USD", value: orderAmounts.get(cap[1]) } }] } }] },
+          { id: cap[1], purchase_units: [{ payments: { captures: [{ id: `CAP-${cap[1]}`, status: captureStatus, amount: { currency_code: "USD", value: orderAmounts.get(cap[1]!) } }] } }] },
           201,
         );
       const refund = /^\/v2\/payments\/captures\/([^/]+)\/refund$/.exec(path);

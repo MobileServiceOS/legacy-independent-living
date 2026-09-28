@@ -45,7 +45,9 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: |
-          if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+          # npm ci when the lockfile matches; if package.json changed (new dep/override),
+          # reinstall and let the bot commit the refreshed lockfile.
+          if [ -f package-lock.json ] && npm ci; then :; else echo "::warning::lockfile out of sync — running npm install"; npm install --no-audit --no-fund; fi
       - name: Dependency audit (production deps, high+)
         id: audit
         continue-on-error: true
