@@ -14,13 +14,23 @@ export const env = {
   get appUrl() {
     return (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
   },
-  /** "mock" (default, sandbox), "paypal", or "stripe". */
+  /**
+   * "mock" (sandbox; default outside production), "paypal", or "stripe".
+   * Throws with a setup hint when misconfigured — callers go through
+   * paymentsStatus(), which turns that into "online payments not set up"
+   * instead of breaking pages.
+   */
   get paymentsProvider(): "mock" | "paypal" | "stripe" {
-    const v = (process.env.PAYMENTS_PROVIDER ?? "mock").toLowerCase();
-    if (v !== "mock" && v !== "stripe" && v !== "paypal") throw new Error(`PAYMENTS_PROVIDER must be "mock", "paypal" or "stripe"`);
-    if (v === "mock" && process.env.NODE_ENV === "production" && process.env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION !== "true")
-      throw new Error("Mock payments are disabled in production. Set PAYMENTS_PROVIDER=stripe.");
-    return v;
+    const production = process.env.NODE_ENV === "production";
+    const raw = (process.env.PAYMENTS_PROVIDER ?? "").trim().toLowerCase();
+    if (!raw || raw === "none") {
+      if (!production) return "mock";
+      throw new Error("PAYMENTS_PROVIDER is not set. Set PAYMENTS_PROVIDER=paypal with PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.");
+    }
+    if (raw !== "mock" && raw !== "stripe" && raw !== "paypal") throw new Error(`PAYMENTS_PROVIDER must be "paypal", "stripe" or "mock" (got "${raw}")`);
+    if (raw === "mock" && production && process.env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION !== "true")
+      throw new Error("Sandbox (mock) payments are disabled in production. Set PAYMENTS_PROVIDER=paypal with PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.");
+    return raw;
   },
   get paypal() {
     const envName = (process.env.PAYPAL_ENV ?? "sandbox").toLowerCase();

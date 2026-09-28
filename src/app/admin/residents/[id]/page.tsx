@@ -25,7 +25,7 @@ import { centsToInput } from "@/domain/money";
 import { PAYMENT_METHOD_LABELS } from "@/domain/payments";
 import { requirePagePermission } from "@/lib/auth/session";
 import { formatDateTime, paymentDate } from "@/lib/format";
-import { getPaymentProvider } from "@/lib/payments";
+import { paymentsStatus } from "@/lib/payments";
 import { businessToday, getSettings } from "@/lib/settings";
 import { residentProfile } from "@/server/queries";
 import { assignableRooms } from "@/server/rooms-query";
@@ -74,7 +74,8 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
     })),
   ).reverse();
   const totalPaid = r.payments.filter((p) => p.status === "SUCCEEDED").reduce((s, p) => s + p.amountCents, 0);
-  const sandbox = getPaymentProvider().name === "MOCK";
+  const payments = paymentsStatus();
+  const sandbox = payments.configured && payments.provider.name === "MOCK";
 
   return (
     <>

@@ -4,7 +4,7 @@ import { ActionForm, Checkbox, Input, MoneyInput, SubmitButton } from "@/compone
 import { Card, Notice, PageHeader } from "@/components/ui";
 import { centsToInput } from "@/domain/money";
 import { requirePagePermission } from "@/lib/auth/session";
-import { getPaymentProvider } from "@/lib/payments";
+import { paymentsStatus } from "@/lib/payments";
 import { businessToday, getSettings } from "@/lib/settings";
 import { runRentEngineAction, updateSettingsAction } from "@/app/actions/admin";
 
@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   await requirePagePermission("settings:write");
   const s = await getSettings();
-  const provider = getPaymentProvider();
+  const payments = paymentsStatus();
+  const provider = payments.configured ? payments.provider : null;
   return (
     <>
       <PageHeader title="Settings" actions={<Link href="/admin/audit" className="btn-secondary btn-sm">Audit log</Link>} />
@@ -48,7 +49,12 @@ export default async function SettingsPage() {
         </Card>
         <div className="min-w-0 space-y-6">
           <Card title="Payment processor">
-            {provider.name === "MOCK" ? (
+            {!provider ? (
+              <Notice tone="bad" title="Online payments aren’t set up">
+                Residents are asked to pay the office; offline payments work normally. {payments.configured ? null : payments.reason}{" "}
+                See <code>docs/DEPLOYMENT.md</code> §6.
+              </Notice>
+            ) : provider.name === "MOCK" ? (
               <Notice tone="warn" title="Sandbox (demo) mode">
                 No real money moves. Set <code>PAYMENTS_PROVIDER=paypal</code> with your PayPal API credentials to accept real payments.
               </Notice>

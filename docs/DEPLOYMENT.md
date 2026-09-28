@@ -11,7 +11,7 @@ The portal is a standard Next.js 15 server app + PostgreSQL. It does **not** run
 |---|---|
 | `DATABASE_URL` | managed Postgres URL (with `?sslmode=require` if needed) |
 | `APP_URL` | `https://portal.legacyindependentliving.net` |
-| `PAYMENTS_PROVIDER` | `paypal` (mock is blocked in production) |
+| `PAYMENTS_PROVIDER` | `paypal`. Leave unset until you have PayPal keys — the portal runs with online payments off (residents are told to pay the office; offline payments work). The sandbox `mock` provider is refused in production. |
 | `PAYPAL_ENV` | `sandbox` while testing, then `live` |
 | `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | developer.paypal.com → Apps & Credentials |
 | `PAYPAL_WEBHOOK_ID` | the ID of the webhook created in step 6 |
@@ -21,6 +21,17 @@ The portal is a standard Next.js 15 server app + PostgreSQL. It does **not** run
 | `APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_BUNDLE_ID` / `APNS_PRIVATE_KEY` / `APNS_ENV` | see §9 (native iOS app only) |
 
 ## 3. Build & release
+**Railway:** `railway.json` in the repo sets everything — build `npm run build`, migrations as the pre-deploy step, start `npm run start`, health check `/api/health` (it checks the database). In the service settings, set **Root Directory** to the folder containing `package.json`, add the Postgres plugin and reference its URL as `DATABASE_URL` (`${{Postgres.DATABASE_URL}}`), and attach a volume mounted at `/data` with `STORAGE_DIR=/data`.
+
+**Troubleshooting a crash loop** (`railway logs`):
+| Log says | Fix |
+|---|---|
+| `Missing required environment variable DATABASE_URL` / health check 503 | add/reference the Postgres `DATABASE_URL` on the web service |
+| `P3009` / `migrate found failed migrations` | the database has a half-applied migration — `railway run npx prisma migrate resolve --rolled-back <name>` then redeploy |
+| `Could not find a production build in the '.next' directory` | build command didn't run — keep `railway.json` at the service root |
+| `[payments] online payments are not set up` | not a crash — the portal runs and tells residents to pay the office until PayPal keys are set |
+
+Generic hosts:
 ```bash
 npm ci
 npm run build

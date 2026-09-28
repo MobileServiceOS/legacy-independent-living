@@ -6,7 +6,7 @@ import { formatCents } from "@/domain/money";
 import { PAYMENT_METHOD_LABELS } from "@/domain/payments";
 import { requireResidentPage } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
-import { getPaymentProvider } from "@/lib/payments";
+import { paymentsStatus } from "@/lib/payments";
 import { sandboxOutcomeAction } from "@/app/actions/resident";
 
 export const metadata: Metadata = { title: "Sandbox checkout" };
@@ -26,7 +26,8 @@ function Outcome({ paymentId, outcome, label, variant }: { paymentId: string; ou
 
 export default async function SandboxCheckout({ params }: { params: Promise<{ paymentId: string }> }) {
   const user = await requireResidentPage();
-  if (getPaymentProvider().name !== "MOCK") notFound();
+  const payments = paymentsStatus();
+  if (!payments.configured || payments.provider.name !== "MOCK") notFound();
   const { paymentId } = await params;
   const payment = await prisma.payment.findUnique({ where: { id: paymentId } });
   if (!payment || payment.residentId !== user.residentId || payment.provider !== "MOCK") notFound();

@@ -20,7 +20,7 @@ import { audit, AUDIT_ACTIONS, SYSTEM_ACTOR, type Actor } from "../lib/audit";
 import { prisma, type Tx } from "../lib/db";
 import { env } from "../lib/env";
 import { notify, notifyAdmins } from "../lib/notify";
-import { getPaymentProvider } from "../lib/payments";
+import { paymentsStatus } from "../lib/payments";
 import type { OnlineMethod, ProviderEvent } from "../lib/payments/provider";
 import { businessToday, getSettings, paymentPolicyOf } from "../lib/settings";
 import { ForbiddenError, NotFoundError, UserError } from "./errors";
@@ -51,7 +51,9 @@ export async function startOnlinePayment(
   const settings = await getSettings();
   if (!settings.onlinePaymentsEnabled) throw new UserError("Online payments are turned off right now. Please contact the office.");
   const today = businessToday(settings);
-  const provider = getPaymentProvider();
+  const status = paymentsStatus();
+  if (!status.configured) throw new UserError("Online payments aren't set up yet. Please pay the office directly.");
+  const provider = status.provider;
   if (!provider.methods.includes(input.method)) throw new UserError("That payment method isn't available", "method");
 
   const payment = await prisma.$transaction(async (tx) => {
@@ -267,7 +269,8 @@ export async function completeSandboxPayment(
   paymentId: string,
   outcome: "succeed" | "decline" | "ach_pending" | "cancel",
 ): Promise<PaymentStatus> {
-  if (getPaymentProvider().name !== "MOCK") throw new ForbiddenError();
+  const status = paymentsStatus();
+  if (!status.configured || status.provider.name !== "MOCK") throw new ForbiddenError();
   const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { resident: { select: { userId: true } } } });
   if (!payment || payment.resident.userId !== user.id) throw new NotFoundError("Payment");
   if (payment.provider !== "MOCK") throw new ForbiddenError();
@@ -368,8 +371,10 @@ export async function refundPayment(actor: Actor, input: { paymentId: string; re
   let refundRef: string | null = null;
   if (payment.provider !== "OFFLINE") {
     if (!payment.providerRef) throw new UserError("This payment has no processor reference to refund");
-    const provider = getPaymentProvider();
-    if (provider.name !== payment.provider) throw new UserError(`This payment was made with ${payment.provider}; that processor isn't active`);
+    const status = paymentsStatus();
+    if (!status.configured || status.provider.name !== payment.provider)
+      throw new UserError(`This payment was made with ${payment.provider}; that processor isn't active, so it can't be refunded here`);
+    const provider = status.provider;
     refundRef = (await provider.refund({ paymentId: payment.id, providerRef: payment.providerRef, amountCents: payment.amountCents })).refundRef;
   }
   const settings = await getSettings();
@@ -395,8 +400,9 @@ export async function completeRedirectPayment(user: { id: string }, paymentId: s
   const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { resident: { select: { userId: true } } } });
   if (!payment || payment.resident.userId !== user.id) throw new NotFoundError("Payment");
   if (payment.status !== "PENDING") return payment.status; // already settled (webhook or earlier return)
-  const provider = getPaymentProvider();
-  if (provider.name !== payment.provider || !provider.completeReturn || !payment.providerRef) throw new UserError("This payment can't be completed here");
+  const status = paymentsStatus();
+  const provider = status.configured ? status.provider : null;
+  if (!provider || provider.name !== payment.provider || !provider.completeReturn || !payment.providerRef) throw new UserError("This payment can't be completed here");
   let event: ProviderEvent;
   try {
     event = await provider.completeReturn({ paymentId: payment.id, providerRef: payment.providerRef });

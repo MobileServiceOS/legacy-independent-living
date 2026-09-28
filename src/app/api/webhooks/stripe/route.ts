@@ -4,7 +4,7 @@
  * Stripe stops retrying; 400 for bad signatures; 500 to request a retry.
  */
 import { NextResponse } from "next/server";
-import { getPaymentProvider } from "@/lib/payments";
+import { paymentsStatus } from "@/lib/payments";
 import { PaymentProviderError } from "@/lib/payments/provider";
 import { NotFoundError } from "@/server/errors";
 import { applyProviderEvent } from "@/server/payments";
@@ -13,7 +13,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const provider = getPaymentProvider();
+  const status = paymentsStatus();
+  // 503 → the processor retries later, once payments are configured.
+  if (!status.configured) return NextResponse.json({ error: "online payments are not set up" }, { status: 503 });
+  const provider = status.provider;
   if (provider.name !== "STRIPE") return NextResponse.json({ error: "Stripe is not the active provider" }, { status: 404 });
   const raw = await req.text();
   let event;

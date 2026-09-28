@@ -7,7 +7,7 @@ import { formatLong } from "@/domain/dates";
 import { centsToInput, formatCents } from "@/domain/money";
 import { requireResidentPage } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
-import { getPaymentProvider } from "@/lib/payments";
+import { paymentsStatus, type PaymentProvider } from "@/lib/payments";
 import { businessToday, getSettings } from "@/lib/settings";
 import { residentFinancials } from "@/server/ledger";
 import { startPaymentAction } from "@/app/actions/resident";
@@ -28,8 +28,7 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
   const settings = await getSettings();
   const { position } = await residentFinancials(prisma, user.residentId, businessToday(settings));
   const payable = position.balanceCents - position.pendingCents;
-  const provider = getPaymentProvider();
-  const sandbox = provider.isSandbox;
+  const payments = paymentsStatus();
 
   return (
     <div className="space-y-5">
@@ -47,16 +46,35 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
             Back to home
           </Link>
         </Card>
-      ) : !settings.onlinePaymentsEnabled ? (
-        <Notice tone="warn" title="Online payments are paused">
+      ) : !settings.onlinePaymentsEnabled || !payments.configured ? (
+        <Notice tone="warn" title={payments.configured ? "Online payments are paused" : "Online payments aren’t available yet"}>
           Please pay the office directly{settings.supportPhone ? ` or call ${settings.supportPhone}` : ""}.
         </Notice>
       ) : (
-        <Card>
+        <PayForm payable={payable} nextDueDate={position.nextDueDate} provider={payments.provider} settings={settings} />
+      )}
+    </div>
+  );
+}
+
+function PayForm({
+  payable,
+  nextDueDate,
+  provider,
+  settings,
+}: {
+  payable: number;
+  nextDueDate: string | null;
+  provider: PaymentProvider;
+  settings: Awaited<ReturnType<typeof getSettings>>;
+}) {
+  const sandbox = provider.isSandbox;
+  return (
+    <Card>
           <div className="mb-5 rounded-xl bg-paper-2 p-4">
             <p className="text-sm font-extrabold uppercase tracking-wider text-muted">Amount due</p>
             <p className="font-serif text-4xl font-semibold tabular-nums">{formatCents(payable)}</p>
-            {position.nextDueDate ? <p className="text-muted">Due {formatLong(position.nextDueDate)}</p> : null}
+            {nextDueDate ? <p className="text-muted">Due {formatLong(nextDueDate)}</p> : null}
           </div>
           <ActionForm action={startPaymentAction} className="space-y-5">
             {settings.allowPartialPayments ? (
@@ -95,8 +113,6 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
                 : `You'll enter your payment details on ${provider.name === "PAYPAL" ? "PayPal's" : "our payment processor's"} secure page. Legacy never sees or stores them.`}
             </p>
           </ActionForm>
-        </Card>
-      )}
-    </div>
+    </Card>
   );
 }
