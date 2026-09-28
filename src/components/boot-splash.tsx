@@ -12,10 +12,10 @@ export function BootSplash() {
         // byte of HTML, before any stylesheet or JS chunk has had a chance to load.
         dangerouslySetInnerHTML={{
           __html: `
-          #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#fbf8f1;transition:opacity .5s ease}
+          #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#fbf8f1;transition:opacity .16s ease-out;opacity:1;pointer-events:auto}
           #boot-splash.boot-splash-out{opacity:0;pointer-events:none}
           #boot-splash svg{width:min(58vw,220px);height:auto;overflow:visible}
-          #boot-splash .bs-word{margin-top:14px;text-align:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:1.5rem;color:#3a431f;letter-spacing:.02em;opacity:0;animation:bsWordIn .6s ease .5s forwards}
+          #boot-splash .bs-word{margin-top:14px;text-align:center;font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:1.5rem;color:#3a431f;letter-spacing:.02em;opacity:0;animation:bsWordIn .4s ease .1s forwards}
           #boot-splash .bs-scene{display:flex;flex-direction:column;align-items:center}
           @media (prefers-reduced-motion: no-preference){
             #boot-splash .bs-tree{transform-origin:64px 150px;animation:bsSway 2.6s ease-in-out infinite}
@@ -80,12 +80,14 @@ export function BootSplash() {
               if (hidden) return;
               hidden = true;
               el.classList.add('boot-splash-out');
-              setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 550);
+              setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 200);
             }
+            // Keep the fade-out snappy: the page underneath is already fully painted by
+            // 'load', so lingering here just shows a translucent splash over a busy page.
             if (document.readyState === 'complete') {
-              setTimeout(hide, 700);
+              setTimeout(hide, 450);
             } else {
-              window.addEventListener('load', function(){ setTimeout(hide, 350); });
+              window.addEventListener('load', function(){ setTimeout(hide, 80); });
             }
             setTimeout(hide, 3500); // failsafe if 'load' never fires (e.g. offline)
           })();
