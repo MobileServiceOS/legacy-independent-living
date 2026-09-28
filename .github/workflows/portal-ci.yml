@@ -47,7 +47,9 @@ jobs:
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
       - name: Dependency audit (production deps, high+)
-        run: npm audit --omit=dev --audit-level=high 2>&1 | tee ci-logs/audit.log
+        id: audit
+        continue-on-error: true
+        run: npm audit --omit=dev --audit-level=high 2>&1 | tee ci-logs/dependency-audit.log
       - name: Upload lockfile (for committing)
         if: always()
         uses: actions/upload-artifact@v4
@@ -112,6 +114,7 @@ jobs:
         run: |
           files=""
           add() { [ "$1" = "failure" ] && files="$files ci-logs/$2.log" || true; }
+          add "${{ steps.audit.outcome }}" dependency-audit
           add "${{ steps.typecheck.outcome }}" typecheck
           add "${{ steps.lint.outcome }}" lint
           add "${{ steps.unit.outcome }}" unit-tests
@@ -123,7 +126,7 @@ jobs:
           add "${{ steps.store.outcome }}" store-screenshots
           [ -n "$files" ] && node scripts/ci-annotate.mjs $files || echo "no failures"
       - name: Fail if any check failed
-        if: steps.lint.outcome == 'failure' || steps.unit.outcome == 'failure' || steps.db.outcome == 'failure' || steps.integration.outcome == 'failure'
+        if: steps.audit.outcome == 'failure' || steps.lint.outcome == 'failure' || steps.unit.outcome == 'failure' || steps.db.outcome == 'failure' || steps.integration.outcome == 'failure'
         run: exit 1
       - name: Commit lockfile (+ screenshots when requested)
         if: success() && github.event_name == 'push'
