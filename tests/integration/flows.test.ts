@@ -694,3 +694,40 @@ describe("push notifications: Web Push + APNs delivery", () => {
     assert.ok(await m.prisma.auditLog.findFirst({ where: { action: "user.deletion_requested", entityId: userId } }));
   });
 });
+
+describe("change password (signed-in user)", () => {
+  test("wrong current password is rejected on the right field; nothing changes", async () => {
+    const owner = await m.prisma.user.findUniqueOrThrow({ where: { id: actor.id } });
+    const s = await m.auth.createSession(owner, {});
+    const sess = await m.auth.lookupSession(s.token);
+    await assert.rejects(m.auth.changePassword(sess!, { currentPassword: "nope", password: "Another2026pass" }), (e: Error & { field?: string }) => {
+      assert.equal(e.field, "currentPassword");
+      return true;
+    });
+    assert.ok(await m.auth.authenticate("owner@test.local", "OwnerPass123"));
+  });
+
+  test("weak or reused new password is rejected", async () => {
+    const owner = await m.prisma.user.findUniqueOrThrow({ where: { id: actor.id } });
+    const sess = await m.auth.lookupSession((await m.auth.createSession(owner, {})).token);
+    await assert.rejects(m.auth.changePassword(sess!, { currentPassword: "OwnerPass123", password: "short1" }), /at least/);
+    await assert.rejects(m.auth.changePassword(sess!, { currentPassword: "OwnerPass123", password: "OwnerPass123" }), /haven’t used/);
+  });
+
+  test("success: new password works, old doesn't, this device stays signed in, other devices and open reset links are revoked, audited", async () => {
+    const owner = await m.prisma.user.findUniqueOrThrow({ where: { id: actor.id } });
+    const here = await m.auth.createSession(owner, {});
+    const elsewhere = await m.auth.createSession(owner, {});
+    const staleLink = await m.prisma.inviteToken.create({
+      data: { userId: owner.id, tokenHash: "stale-reset-link-hash-for-test-000000000", expiresAt: new Date(Date.now() + 86_400_000) },
+    });
+    const sess = await m.auth.lookupSession(here.token);
+    await m.auth.changePassword(sess!, { currentPassword: "OwnerPass123", password: "OwnerNew2026pass" });
+    await assert.rejects(m.auth.authenticate("owner@test.local", "OwnerPass123"), /don't match/);
+    assert.ok(await m.auth.authenticate("owner@test.local", "OwnerNew2026pass"));
+    assert.ok(await m.auth.lookupSession(here.token), "current device stays signed in");
+    assert.equal(await m.auth.lookupSession(elsewhere.token), null, "other devices signed out");
+    assert.ok((await m.prisma.inviteToken.findUniqueOrThrow({ where: { id: staleLink.id } })).usedAt, "open reset link voided");
+    assert.ok(await m.prisma.auditLog.findFirst({ where: { action: "user.password_changed", entityId: owner.id } }));
+  });
+});

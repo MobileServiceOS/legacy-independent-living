@@ -102,3 +102,29 @@ export async function acceptInvite(token: string, password: string): Promise<Use
     return user;
   });
 }
+
+/**
+ * Signed-in user changes their own password. Requires the current password,
+ * signs out every OTHER device (this one stays signed in), and is audited.
+ */
+export async function changePassword(
+  user: Pick<SessionUser, "id" | "sessionId">,
+  input: { currentPassword: string; password: string },
+  meta: { ip?: string | null } = {},
+): Promise<void> {
+  const record = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!record || record.status !== "ACTIVE") throw new UserError("Please sign in again.");
+  if (!(await verifyPassword(input.currentPassword, record.passwordHash)))
+    throw new UserError("That isn’t your current password", "currentPassword");
+  const strength = validatePasswordStrength(input.password);
+  if (strength) throw new UserError(strength, "password");
+  if (await verifyPassword(input.password, record.passwordHash)) throw new UserError("Choose a password you haven’t used here before", "password");
+  const passwordHash = await hashPassword(input.password);
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id: record.id }, data: { passwordHash } });
+    const { count } = await tx.session.deleteMany({ where: { userId: record.id, id: { not: user.sessionId } } });
+    // A reset link issued earlier must not be usable to override the new password.
+    await tx.inviteToken.updateMany({ where: { userId: record.id, usedAt: null }, data: { usedAt: new Date() } });
+    await audit(tx, { id: record.id, email: record.email, role: record.role }, "user.password_changed", "user", record.id, { otherSessionsSignedOut: count }, meta.ip);
+  });
+}

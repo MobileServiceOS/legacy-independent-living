@@ -6,8 +6,8 @@ import { runAction, type ActionState } from "@/lib/actions";
 import { clearSessionCookie, getSessionUser, requestMeta, setSessionCookie } from "@/lib/auth/session";
 import { unregisterDevice } from "@/lib/push";
 import { limiters } from "@/lib/security/rate-limit";
-import { loginSchema, setPasswordSchema } from "@/lib/validation";
-import { acceptInvite, authenticate, createSession, revokeSession } from "@/server/auth";
+import { changePasswordSchema, loginSchema, setPasswordSchema } from "@/lib/validation";
+import { acceptInvite, authenticate, changePassword, createSession, revokeSession } from "@/server/auth";
 import { UserError } from "@/server/errors";
 
 function safeNext(next: string | undefined, fallback: string): string {
@@ -55,5 +55,18 @@ export async function acceptInviteAction(prev: ActionState, formData: FormData):
     const session = await createSession(user, meta);
     await setSessionCookie(session.token, session.expiresAt);
     return { redirectTo: homePathFor(user.role) };
+  });
+}
+
+export async function changePasswordAction(prev: ActionState, formData: FormData): Promise<ActionState> {
+  return runAction(prev, formData, changePasswordSchema, async ({ currentPassword, password }) => {
+    const user = await getSessionUser();
+    if (!user) throw new UserError("Please sign in again.");
+    const meta = await requestMeta();
+    const rl = limiters.login.hit(`change-password:${user.id}`);
+    if (!rl.allowed) throw new UserError(`Too many attempts. Try again in ${Math.ceil(rl.retryAfterSeconds / 60)} minutes.`);
+    await changePassword(user, { currentPassword, password }, meta);
+    limiters.login.reset(`change-password:${user.id}`);
+    return { message: "Password changed. You’ve been signed out on your other devices." };
   });
 }

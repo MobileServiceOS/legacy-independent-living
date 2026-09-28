@@ -7,12 +7,13 @@ import { requirePagePermission } from "@/lib/auth/session";
 import { paymentsStatus } from "@/lib/payments";
 import { businessToday, getSettings } from "@/lib/settings";
 import { runRentEngineAction, updateSettingsAction } from "@/app/actions/admin";
+import { ChangePasswordForm } from "@/components/change-password";
 
 export const metadata: Metadata = { title: "Settings" };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  await requirePagePermission("settings:write");
+  const me = await requirePagePermission("settings:write");
   const s = await getSettings();
   const payments = paymentsStatus();
   const provider = payments.configured ? payments.provider : null;
@@ -67,6 +68,12 @@ export default async function SettingsPage() {
                 Residents pay on {provider.name === "PAYPAL" ? "PayPal" : "Stripe"}’s secure page. Card and bank details never touch this app.
               </Notice>
             )}
+          </Card>
+          <Card title="Your sign-in">
+            <p className="mb-3 text-sm text-muted">
+              Signed in as <strong>{me.email}</strong>. Changing your password signs you out everywhere else.
+            </p>
+            <ChangePasswordForm />
           </Card>
           <Card title="Rent engine">
             <p className="mb-3 text-sm text-muted">

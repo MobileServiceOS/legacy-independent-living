@@ -91,6 +91,14 @@ export const setPasswordSchema = z
   .object({ token: z.string().min(20).max(200), password: z.string().max(200), confirm: z.string().max(200) })
   .refine((v) => v.password === v.confirm, { path: ["confirm"], message: "Passwords do not match" });
 
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Enter your current password").max(200),
+    password: z.string().max(200),
+    confirm: z.string().max(200),
+  })
+  .refine((v) => v.password === v.confirm, { path: ["confirm"], message: "Passwords do not match" });
+
 // ---------------------------------------------------------------- applications
 export const applicationSchema = z.object({
   firstName: required("First name", 80),

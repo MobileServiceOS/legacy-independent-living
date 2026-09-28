@@ -12,6 +12,7 @@ import { requireResidentPage } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { logoutAction } from "@/app/actions/auth";
+import { ChangePasswordForm } from "@/components/change-password";
 
 export const metadata: Metadata = { title: "Profile" };
 export const dynamic = "force-dynamic";
@@ -73,6 +74,9 @@ export default async function ProfilePage() {
         Need to update something? Contact the office{settings.supportPhone ? ` at ${settings.supportPhone}` : ""}.
       </p>
       <PushSettings vapidKey={vapidConfig()?.publicKey ?? null} />
+      <Disclosure summary={<span className="font-bold">Change password</span>}>
+        <ChangePasswordForm />
+      </Disclosure>
       <SignOutButton action={logoutAction} className="btn-secondary w-full" />
       <Disclosure summary={<span className="text-muted">Delete my account</span>}>
         <ActionForm action={requestDeletionAction} className="space-y-3">

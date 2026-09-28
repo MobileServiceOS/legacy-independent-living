@@ -15,7 +15,7 @@
 | Offline payments (cash / money order / check), reports, CSV, audit log | ✅ |
 | Maintenance requests with photos, status timeline, staff notes | ✅ |
 | **Push notifications** — Web Push (PWA) + Apple Push (native app) | ✅ crypto verified vs RFC 8291; **needs one real-device check** |
-| Password reset (office issues a reset link), turn sign-in off/on | ✅ |
+| Change password (owner: Settings → Your sign-in; residents: Profile), password reset links from the office, turn sign-in off/on | ✅ |
 | Account deletion request (App Store 5.1.1(v)) | ✅ |
 | Privacy policy page (`/privacy`) | ✅ — review wording |
 | PWA install, offline page, iPhone/iPad/PWA store screenshots | ✅ |

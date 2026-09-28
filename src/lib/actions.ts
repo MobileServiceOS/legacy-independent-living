@@ -21,7 +21,7 @@ export const initialActionState: ActionState = { version: 0 };
 
 type Outcome = void | { message?: string; redirectTo?: string; data?: Record<string, string> };
 
-const SECRET_FIELDS = new Set(["password", "confirm", "token"]);
+const SECRET_FIELDS = new Set(["password", "confirm", "token", "currentPassword"]);
 
 function echo(fd: FormData): Record<string, string> {
   const v = formToObject(fd);
