@@ -340,13 +340,18 @@ describe("pay ahead: overpaying banks a credit that auto-applies to future rent"
     pos = await balanceOf(residentId);
     assert.equal(pos.status, "PAID");
     assert.equal(pos.creditCents, 0);
-    await assert.rejects(m.payments.startOnlinePayment({ id: userId, email: "ada@test.local" }, { amount: 100, method: "DEBIT_CARD" }), /no balance/);
+    // Credit is fully spent, but pay-ahead is still on: a fresh small payment is still
+    // allowed (it just banks as new credit for December), not rejected for "no balance".
+    const { paymentId } = await m.payments.startOnlinePayment({ id: userId, email: "ada@test.local" }, { amount: 100, method: "DEBIT_CARD" });
+    await m.payments.completeSandboxPayment({ id: userId }, paymentId, "succeed");
+    pos = await balanceOf(residentId);
+    assert.equal(pos.creditCents, 100);
   });
 
   test("paying ahead is refused when the setting is off", async () => {
     await m.prisma.settings.update({ where: { id: 1 }, data: { allowPayAhead: false } });
     await m.rent.runRentEngine({ today: "2026-12-28" }); // posts December rent — now genuinely due
-    assert.equal((await balanceOf(residentId)).balanceCents, 50000);
+    assert.equal((await balanceOf(residentId)).balanceCents, 49900); // $500 December rent − $1 credit banked above
     await assert.rejects(m.payments.startOnlinePayment({ id: userId, email: "ada@test.local" }, { amount: 100000, method: "DEBIT_CARD" }), /most you can pay/);
     await m.prisma.settings.update({ where: { id: 1 }, data: { allowPayAhead: true, maxPayAheadMonths: 6 } });
   });
