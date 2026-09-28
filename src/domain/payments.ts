@@ -18,10 +18,10 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   CANCELED: "Canceled",
 };
 
-export const PAYMENT_METHODS = ["ACH", "DEBIT_CARD", "CREDIT_CARD", "CASH", "MONEY_ORDER", "CHECK", "EXTERNAL", "PAYPAL"] as const;
+export const PAYMENT_METHODS = ["ACH", "DEBIT_CARD", "CREDIT_CARD", "CASH", "MONEY_ORDER", "CHECK", "EXTERNAL", "PAYPAL", "CASH_APP"] as const;
 export type PaymentMethodType = (typeof PAYMENT_METHODS)[number];
 
-export const ONLINE_METHODS: readonly PaymentMethodType[] = ["PAYPAL", "ACH", "DEBIT_CARD", "CREDIT_CARD"];
+export const ONLINE_METHODS: readonly PaymentMethodType[] = ["DEBIT_CARD", "CREDIT_CARD", "CASH_APP", "ACH", "PAYPAL"];
 export const OFFLINE_METHODS: readonly PaymentMethodType[] = ["CASH", "MONEY_ORDER", "CHECK", "EXTERNAL"];
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethodType, string> = {
@@ -33,6 +33,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethodType, string> = {
   CHECK: "Check",
   EXTERNAL: "External payment",
   PAYPAL: "PayPal",
+  CASH_APP: "Cash App Pay",
 };
 
 export function isOnlineMethod(m: PaymentMethodType): boolean {

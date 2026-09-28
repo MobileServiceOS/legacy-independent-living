@@ -57,7 +57,7 @@ export default async function SettingsPage() {
               </Notice>
             ) : provider.name === "MOCK" ? (
               <Notice tone="warn" title="Sandbox (demo) mode">
-                No real money moves. Set <code>PAYMENTS_PROVIDER=paypal</code> with your PayPal API credentials to accept real payments.
+                No real money moves. Set <code>PAYMENTS_PROVIDER=stripe</code> with your Stripe secret key and webhook signing secret to accept real payments.
               </Notice>
             ) : provider.isSandbox ? (
               <Notice tone="warn" title={`${provider.name === "PAYPAL" ? "PayPal" : "Stripe"} sandbox`}>

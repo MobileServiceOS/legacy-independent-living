@@ -5,21 +5,23 @@
  */
 import type { CheckoutRequest, CheckoutSession, OnlineMethod, PaymentProvider, ProviderEvent } from "./provider.ts";
 
-const ALL: readonly OnlineMethod[] = ["PAYPAL", "DEBIT_CARD", "CREDIT_CARD", "ACH"];
+const ALL: readonly OnlineMethod[] = ["DEBIT_CARD", "CREDIT_CARD", "CASH_APP", "ACH", "PAYPAL"];
+/** Mirrors production (Stripe: cards, Cash App Pay, bank account). */
+const DEFAULT: readonly OnlineMethod[] = ["DEBIT_CARD", "CREDIT_CARD", "CASH_APP", "ACH"];
 
 export function parseMethods(value: string | undefined): readonly OnlineMethod[] {
-  const picked = (value ?? "PAYPAL")
+  const picked = (value ?? "")
     .split(",")
     .map((s) => s.trim().toUpperCase())
     .filter((s): s is OnlineMethod => (ALL as readonly string[]).includes(s));
-  return picked.length ? picked : ["PAYPAL"];
+  return picked.length ? picked : DEFAULT;
 }
 import { PaymentProviderError } from "./provider.ts";
 
 export class MockPaymentProvider implements PaymentProvider {
   readonly name = "MOCK" as const;
   readonly isSandbox = true;
-  /** Mirrors production (PayPal) by default; MOCK_PAYMENT_METHODS="PAYPAL,DEBIT_CARD,CREDIT_CARD,ACH" to demo others. */
+  /** Mirrors production (Stripe) by default; MOCK_PAYMENT_METHODS="PAYPAL" etc. to demo others. */
   readonly methods: readonly OnlineMethod[] = parseMethods(process.env.MOCK_PAYMENT_METHODS);
 
   async createCheckout(req: CheckoutRequest): Promise<CheckoutSession> {

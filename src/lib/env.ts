@@ -25,11 +25,11 @@ export const env = {
     const raw = (process.env.PAYMENTS_PROVIDER ?? "").trim().toLowerCase();
     if (!raw || raw === "none") {
       if (!production) return "mock";
-      throw new Error("PAYMENTS_PROVIDER is not set. Set PAYMENTS_PROVIDER=paypal with PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.");
+      throw new Error("PAYMENTS_PROVIDER is not set. Set PAYMENTS_PROVIDER=stripe with STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET.");
     }
     if (raw !== "mock" && raw !== "stripe" && raw !== "paypal") throw new Error(`PAYMENTS_PROVIDER must be "paypal", "stripe" or "mock" (got "${raw}")`);
     if (raw === "mock" && production && process.env.ALLOW_MOCK_PAYMENTS_IN_PRODUCTION !== "true")
-      throw new Error("Sandbox (mock) payments are disabled in production. Set PAYMENTS_PROVIDER=paypal with PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET.");
+      throw new Error("Sandbox (mock) payments are disabled in production. Set PAYMENTS_PROVIDER=stripe with STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET.");
     return raw;
   },
   get paypal() {

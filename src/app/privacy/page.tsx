@@ -28,7 +28,7 @@ export default async function PrivacyPage() {
           <ul>
             <li><strong>Contact details</strong> — name, email, phone and an optional emergency contact, from your application or move-in.</li>
             <li><strong>Housing details</strong> — your home, room, move-in date and rent schedule.</li>
-            <li><strong>Payment records</strong> — amounts, dates, receipt numbers and payment method type. Card and bank details are entered on PayPal’s secure page; we never see or store them. We may keep the card brand and last 4 digits PayPal shares with us.</li>
+            <li><strong>Payment records</strong> — amounts, dates, receipt numbers and payment method type. Card, Cash App and bank details are entered on our payment processor Stripe’s secure page; we never see or store them. We may keep the card brand and last 4 digits Stripe shares with us.</li>
             <li><strong>Repair requests</strong> — descriptions, photos you attach, and messages with the office.</li>
             <li><strong>Documents</strong> — your housing agreement and papers the office adds.</li>
             <li><strong>Device and sign-in data</strong> — sign-in times, IP address and browser type for security; if you turn on notifications, a device notification token.</li>
@@ -48,7 +48,7 @@ export default async function PrivacyPage() {
         <section>
           <h2>Who we share it with</h2>
           <ul>
-            <li><strong>PayPal</strong>, to process rent payments.</li>
+            <li><strong>Stripe</strong>, to process rent payments (and Cash App, if you choose Cash App Pay).</li>
             <li><strong>Apple / your browser’s push service</strong>, only to deliver notifications you turned on.</li>
             <li>Our hosting and database providers, who store data on our behalf.</li>
             <li>Authorities, when the law requires it.</li>

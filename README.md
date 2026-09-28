@@ -102,7 +102,7 @@ Full details — schema, routes, auth model, payment architecture, rent engine, 
 
 ### Payments
 - Provider interface (`src/lib/payments/provider.ts`) with three implementations:
-  **PayPal** (production — PayPal balance, bank, or debit/credit card as guest; server-side capture), **Mock** (sandbox checkout inside the app; refused in production), and **Stripe** (alternative).
+  **Stripe** (production — debit/credit card, Cash App Pay, bank account/ACH via hosted Checkout; server-side confirmation on return), **PayPal** (alternative), **Mock** (sandbox checkout inside the app; refused in production).
 - Card and bank details are entered on the processor's hosted page. The database stores only opaque references, brand and last 4 (a CHECK constraint rejects anything that isn't 4 digits).
 - A payment only hits the ledger on **SUCCEEDED**; pending ACH shows as *Payment pending*; refunds post a `REFUND` entry.
 - Webhooks are signature-verified (raw body, 5-min tolerance, constant-time compare) and de-duplicated by event id.

@@ -37,8 +37,7 @@ and the server sends via APNs (`src/lib/push/apns.ts`). Your job is the native p
 - From the owner portal (another device/browser) → Notifications → send an announcement → the phone gets a push
   within seconds. Tapping it opens the app on the right screen.
 - Repairs → Report a problem → “Take or add photos” offers Camera and Photo Library.
-- Pay rent → PayPal opens **inside the app** and returns to the receipt. If PayPal refuses to load inside the web view,
-  report it — the fallback is opening checkout in `SFSafariViewController` via `@capacitor/browser` with a universal-link return.
+- Pay rent → Stripe checkout opens **inside the app**: pay by card (test mode: 4242 4242 4242 4242) → returns to the receipt. Cash App Pay hands off to the Cash App and back. Backing out returns to the Pay screen with "nothing was charged".
 - Sign out → the device stops receiving that resident's pushes (`push_subscriptions.disabled_at` set).
 
 ## Ship

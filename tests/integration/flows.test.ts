@@ -626,6 +626,177 @@ describe("PayPal: checkout → return capture → ledger → webhook replay → 
   });
 });
 
+describe("Stripe (production processor): card, Cash App Pay, ACH, cancel, refund, spoofing", () => {
+  let user: { id: string; email: string };
+  let residentId = "";
+  const calls: string[] = [];
+  const sessions = new Map<string, { amount: number; paymentId: string; type: string; status: string; paymentStatus: string; expired?: boolean }>();
+  const WHSEC = "whsec_integration";
+  let failNextCreate: string | null = null;
+  let provider: import("../../src/lib/payments/stripe").StripePaymentProvider;
+  let stripeMod: typeof import("../../src/lib/payments/stripe");
+  let sig: typeof import("../../src/lib/payments/stripe-signature");
+
+  const charge = async (amount: number) => {
+    const open = (await balanceOf(residentId)).balanceCents;
+    if (open > 0) await m.payments.recordOfflinePayment(actor, { residentId, amount: open, paidOn: TODAY, method: "CASH", reference: "test reset", note: null });
+    await m.residents.addManualLedgerEntry(actor, { residentId, kind: "OTHER_CHARGE", amount, effectiveDate: TODAY, description: "Stripe test charge" });
+  };
+  const webhook = async (id: string, type: string, object: Record<string, unknown>) => {
+    const body = JSON.stringify({ id, type, data: { object } });
+    const headers = new Headers({ "stripe-signature": sig.buildStripeSignatureHeader(body, WHSEC, Math.floor(Date.now() / 1000)) });
+    return m.payments.applyProviderEvent("STRIPE", await provider.parseWebhook(body, headers));
+  };
+
+  before(async () => {
+    stripeMod = await import("../../src/lib/payments/stripe");
+    sig = await import("../../src/lib/payments/stripe-signature");
+    const r = await m.prisma.resident.findFirstOrThrow({ where: { email: "pat@test.local" } });
+    residentId = r.id;
+    user = { id: r.userId!, email: r.email };
+    let n = 0;
+    const fetchImpl = (async (url: string, init: RequestInit) => {
+      const u = new URL(url);
+      calls.push(`${init.method} ${u.pathname}`);
+      const ok = (json: unknown, status = 200) => new Response(JSON.stringify(json), { status });
+      const form = new URLSearchParams(typeof init.body === "string" ? init.body : "");
+      if (init.method === "POST" && u.pathname === "/v1/checkout/sessions") {
+        if (failNextCreate) {
+          const msg = failNextCreate;
+          failNextCreate = null;
+          return ok({ error: { message: msg, param: "payment_method_types" } }, 400);
+        }
+        const id = `cs_test_${++n}`;
+        sessions.set(id, { amount: Number(form.get("line_items[0][price_data][unit_amount]")), paymentId: form.get("metadata[paymentId]")!, type: form.get("payment_method_types[0]")!, status: "open", paymentStatus: "unpaid" });
+        return ok({ id, url: `https://checkout.stripe.com/c/pay/${id}` });
+      }
+      const get = /^\/v1\/checkout\/sessions\/(cs_test_\d+)$/.exec(u.pathname);
+      if (init.method === "GET" && get) {
+        const sx = sessions.get(get[1]!)!;
+        const pm = sx.type === "cashapp" ? { type: "cashapp" } : sx.type === "card" ? { type: "card", card: { brand: "visa", last4: "4242" } } : { type: "us_bank_account" };
+        return ok({
+          id: get[1], status: sx.status, payment_status: sx.paymentStatus, amount_total: sx.amount, currency: "usd",
+          payment_intent: sx.status === "complete" ? { id: `pi_${get[1]}`, latest_charge: { payment_method_details: pm } } : null,
+          metadata: { paymentId: sx.paymentId },
+        });
+      }
+      const exp = /^\/v1\/checkout\/sessions\/(cs_test_\d+)\/expire$/.exec(u.pathname);
+      if (exp) {
+        sessions.get(exp[1]!)!.status = "expired";
+        return ok({ id: exp[1], status: "expired" });
+      }
+      if (u.pathname === "/v1/refunds") return ok({ id: `re_${form.get("payment_intent")}` });
+      return ok({ error: { message: "not found" } }, 404);
+    }) as unknown as typeof fetch;
+    provider = new stripeMod.StripePaymentProvider("sk_test_integration", WHSEC, fetchImpl);
+    m.providers.setPaymentProviderForTests(provider);
+  });
+
+  after(() => m.providers.setPaymentProviderForTests(null));
+
+  test("card: Stripe Checkout → return confirms server-side → $0, receipt shows Visa 4242 → refund goes to Stripe", async () => {
+    await charge(5000);
+    const { paymentId, redirectUrl } = await m.payments.startOnlinePayment(user, { amount: 5000, method: "DEBIT_CARD" });
+    assert.match(redirectUrl, /^https:\/\/checkout\.stripe\.com\//);
+    let p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    assert.equal(p.provider, "STRIPE");
+    assert.match(p.providerRef ?? "", /^cs_test_/);
+    const session = sessions.get(p.providerRef!)!;
+    assert.equal(session.amount, 5000, "server set the amount");
+    assert.equal(session.type, "card");
+    assert.equal((await balanceOf(residentId)).balanceCents, 5000, "no money moves before checkout completes");
+
+    Object.assign(session, { status: "complete", paymentStatus: "paid" });
+    assert.equal(await m.payments.completeRedirectPayment(user, paymentId), "SUCCEEDED");
+    p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    assert.match(p.providerRef ?? "", /^pi_cs_test_/);
+    assert.equal(p.cardBrand, "Visa");
+    assert.equal(p.last4, "4242");
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
+
+    // late webhook for the same checkout: no double credit
+    await webhook("evt_card_late", "checkout.session.completed", { id: p.providerRef!.slice(3), metadata: { paymentId }, payment_intent: p.providerRef, payment_status: "paid", amount_total: 5000, currency: "usd" });
+    assert.equal(await m.prisma.ledgerEntry.count({ where: { paymentId, type: "PAYMENT" } }), 1);
+
+    await m.payments.refundPayment(actor, { paymentId, reason: "Duplicate" });
+    assert.ok(calls.includes("POST /v1/refunds"));
+    assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).status, "REFUNDED");
+    assert.equal((await balanceOf(residentId)).balanceCents, 5000);
+  });
+
+  test("Cash App Pay: checkout uses cashapp, settles instantly, receipt says Cash App", async () => {
+    await charge(2500);
+    const { paymentId } = await m.payments.startOnlinePayment(user, { amount: 2500, method: "CASH_APP" });
+    const p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    const session = sessions.get(p.providerRef!)!;
+    assert.equal(session.type, "cashapp");
+    Object.assign(session, { status: "complete", paymentStatus: "paid" });
+    assert.equal(await m.payments.completeRedirectPayment(user, paymentId), "SUCCEEDED");
+    assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).cardBrand, "Cash App");
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
+  });
+
+  test("ACH: return shows 'payment pending' → signed webhook clears it", async () => {
+    await charge(75000);
+    const { paymentId } = await m.payments.startOnlinePayment(user, { amount: 75000, method: "ACH" });
+    const ref = (await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).providerRef!;
+    const session = sessions.get(ref)!;
+    assert.equal(session.type, "us_bank_account");
+    Object.assign(session, { status: "complete", paymentStatus: "unpaid" });
+    assert.equal(await m.payments.completeRedirectPayment(user, paymentId), "PROCESSING");
+    assert.equal((await balanceOf(residentId)).status, "PENDING");
+    await webhook("evt_ach_ok", "checkout.session.async_payment_succeeded", { id: ref, metadata: { paymentId }, payment_intent: `pi_${ref}`, payment_status: "paid", amount_total: 75000, currency: "usd" });
+    assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).status, "SUCCEEDED");
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
+  });
+
+  test("resident backs out: the Stripe checkout is expired first, so it can't be paid later", async () => {
+    await charge(1000);
+    const { paymentId } = await m.payments.startOnlinePayment(user, { amount: 1000, method: "CREDIT_CARD" });
+    const ref = (await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).providerRef!;
+    await m.payments.cancelRedirectPayment(user, paymentId);
+    assert.ok(calls.includes(`POST /v1/checkout/sessions/${ref}/expire`));
+    assert.equal(sessions.get(ref)!.status, "expired");
+    assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).status, "CANCELED");
+    assert.equal((await balanceOf(residentId)).balanceCents, 1000);
+
+    // if they actually paid in another tab, cancel does NOT close it — the return/webhook settles it
+    const second = await m.payments.startOnlinePayment(user, { amount: 1000, method: "CREDIT_CARD" });
+    const ref2 = (await m.prisma.payment.findUniqueOrThrow({ where: { id: second.paymentId } })).providerRef!;
+    Object.assign(sessions.get(ref2)!, { status: "complete", paymentStatus: "paid" });
+    await m.payments.cancelRedirectPayment(user, second.paymentId);
+    assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: second.paymentId } })).status, "PENDING");
+    assert.equal(await m.payments.completeRedirectPayment(user, second.paymentId), "SUCCEEDED");
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
+  });
+
+  test("SECURITY: signed events for another checkout or a different amount can't settle our payment", async () => {
+    await charge(75000);
+    const { paymentId } = await m.payments.startOnlinePayment(user, { amount: 75000, method: "DEBIT_CARD" });
+    const ref = (await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).providerRef!;
+    await webhook("evt_spoof_1", "checkout.session.completed", { id: "cs_attacker", metadata: { paymentId }, payment_intent: "pi_attacker", payment_status: "paid", amount_total: 1, currency: "usd" });
+    await webhook("evt_spoof_2", "checkout.session.completed", { id: ref, metadata: { paymentId }, payment_intent: `pi_${ref}`, payment_status: "paid", amount_total: 100, currency: "usd" });
+    await webhook("evt_spoof_3", "checkout.session.completed", { id: ref, metadata: { paymentId }, payment_intent: `pi_${ref}`, payment_status: "paid", amount_total: 75000, currency: "eur" });
+    const p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    assert.equal(p.status, "PENDING");
+    assert.equal(p.providerRef, ref);
+    assert.equal((await balanceOf(residentId)).balanceCents, 75000);
+    assert.equal(await m.prisma.auditLog.count({ where: { action: "payment.event_mismatch", entityId: paymentId } }), 3);
+    await webhook("evt_genuine", "checkout.session.completed", { id: ref, metadata: { paymentId }, payment_intent: `pi_${ref}`, payment_status: "paid", amount_total: 75000, currency: "usd" });
+    assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).status, "SUCCEEDED");
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
+  });
+
+  test("a method that isn't switched on in Stripe → clear message, payment closed, balance untouched", async () => {
+    await charge(2000);
+    failNextCreate = "The payment method type provided: cashapp is invalid.";
+    await assert.rejects(m.payments.startOnlinePayment(user, { amount: 2000, method: "CASH_APP" }), /choose another/);
+    const last = await m.prisma.payment.findFirstOrThrow({ where: { residentId }, orderBy: { createdAt: "desc" } });
+    assert.equal(last.status, "FAILED");
+    assert.equal((await balanceOf(residentId)).balanceCents, 2000);
+  });
+});
+
 describe("push notifications: Web Push + APNs delivery", () => {
   let userId = "";
   const webSent: string[] = [];

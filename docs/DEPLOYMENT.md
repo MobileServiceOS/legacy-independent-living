@@ -11,10 +11,10 @@ The portal is a standard Next.js 15 server app + PostgreSQL. It does **not** run
 |---|---|
 | `DATABASE_URL` | managed Postgres URL (with `?sslmode=require` if needed) |
 | `APP_URL` | `https://portal.legacyindependentliving.net` |
-| `PAYMENTS_PROVIDER` | `paypal`. Leave unset until you have PayPal keys — the portal runs with online payments off (residents are told to pay the office; offline payments work). The sandbox `mock` provider is refused in production. |
-| `PAYPAL_ENV` | `sandbox` while testing, then `live` |
-| `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | developer.paypal.com → Apps & Credentials |
-| `PAYPAL_WEBHOOK_ID` | the ID of the webhook created in step 6 |
+| `PAYMENTS_PROVIDER` | `stripe`. Leave unset until you have Stripe keys — the portal runs with online payments off (residents are told to pay the office; offline payments work). The sandbox `mock` provider is refused in production. |
+| `STRIPE_SECRET_KEY` | Stripe Dashboard → Developers → API keys → **Secret key** (`sk_test_…` while testing, `sk_live_…` for real money). Never the publishable `pk_…` key. |
+| `STRIPE_WEBHOOK_SECRET` | the **Signing secret** (`whsec_…`) of the webhook created in §6 |
+| `STRIPE_METHODS` | optional — what residents can choose, in order. Default `DEBIT_CARD,CREDIT_CARD,CASH_APP,ACH`. |
 | `CRON_SECRET` | `openssl rand -hex 32` |
 | `TRUSTED_PROXY_HOPS` | `1` on Railway (default). Set `2` only if Cloudflare's orange-cloud proxy sits in front. |
 | `STORAGE_DIR` | path on the persistent volume |
@@ -30,7 +30,7 @@ The portal is a standard Next.js 15 server app + PostgreSQL. It does **not** run
 | `Missing required environment variable DATABASE_URL` / health check 503 | add/reference the Postgres `DATABASE_URL` on the web service |
 | `P3009` / `migrate found failed migrations` | the database has a half-applied migration — `railway run npx prisma migrate resolve --rolled-back <name>` then redeploy |
 | `Could not find a production build in the '.next' directory` | build command didn't run — keep `railway.json` at the service root |
-| `[payments] online payments are not set up` | not a crash — the portal runs and tells residents to pay the office until PayPal keys are set |
+| `[payments] online payments are not set up` | not a crash — the portal runs and tells residents to pay the office until Stripe keys are set |
 
 Generic hosts:
 ```bash
@@ -60,16 +60,21 @@ curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://portal.legacyi
 (Vercel: add both to `vercel.json` crons; Vercel sends a GET with the bearer header when `CRON_SECRET` is set — both routes accept GET.)
 Pushes normally go out within a second of the event; the sweep only catches retries and anything interrupted by a restart.
 
-## 6. PayPal
-1. Use a **PayPal Business** account. At developer.paypal.com → **Apps & Credentials**, create an app (Sandbox first, then Live) and copy the Client ID + Secret.
-2. In the app, **Add webhook**: URL `https://<domain>/api/webhooks/paypal`, events
-   `PAYMENT.CAPTURE.COMPLETED`, `PAYMENT.CAPTURE.PENDING`, `PAYMENT.CAPTURE.DENIED`, `PAYMENT.CAPTURE.DECLINED`, `PAYMENT.CAPTURE.REFUNDED`, `PAYMENT.CAPTURE.REVERSED`, `CHECKOUT.ORDER.VOIDED`. Copy its **Webhook ID** into `PAYPAL_WEBHOOK_ID`.
-3. Test end to end with a sandbox buyer account (Sandbox → Accounts): pay rent, confirm the receipt and $0 balance, then refund from the owner portal.
-4. Switch to live: `PAYPAL_ENV=live` + live Client ID/Secret/Webhook ID.
+## 6. Stripe (payments)
+1. Create / sign in to your **Stripe account** at dashboard.stripe.com and finish **business verification** (business details, bank account for payouts). Payouts arrive in about 2 business days.
+2. **Payment methods** (Settings → Payment methods): make sure **Cards**, **Cash App Pay** and **ACH Direct Debit** are **On**. Anything you leave off, remove from `STRIPE_METHODS` so residents don't see it.
+3. **Test mode first** (toggle at the top of the dashboard): Developers → API keys → copy the **Secret key** `sk_test_…` → `STRIPE_SECRET_KEY`.
+4. **Webhook** (Developers → Webhooks → **Add endpoint**): URL `https://<portal-domain>/api/webhooks/stripe`, events
+   `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`.
+   Copy the endpoint's **Signing secret** `whsec_…` → `STRIPE_WEBHOOK_SECRET`. Set `PAYMENTS_PROVIDER=stripe`, redeploy.
+5. **Test end to end** as a resident: pay with card `4242 4242 4242 4242` (any future date, any CVC) → receipt and $0 balance; refund it from the owner portal. Try ACH with Stripe's test bank, and Cash App Pay's test page.
+6. **Go live:** switch the dashboard to Live mode, repeat steps 3–4 with the live secret key and a live webhook endpoint (its own `whsec_…`), redeploy. Settings → Payment processor then shows **Stripe (live)**.
 
-How it works: the resident is sent to PayPal, pays with PayPal balance, bank, or a debit/credit card (no PayPal account needed), and is returned to `/api/pay/return`, which **captures the payment server-side** and posts it to the ledger. Webhooks are the backup if the resident closes the tab. Refunds from the owner portal go straight to PayPal.
+How it works: the resident picks card, Cash App Pay or bank account and is sent to Stripe's hosted checkout (card, Cash App and bank details never touch this app). On return, `/api/pay/return` asks Stripe for the checkout result **server-side** and posts it to the ledger; webhooks are the backup if the resident closes the app. Bank payments show as *Payment pending* until Stripe confirms them (3–5 business days). If the resident backs out, the Stripe checkout is expired so it can't be paid later. Refunds from the owner portal go straight to Stripe. Every Stripe event is signature-checked and must match the payment's checkout, amount and currency.
 
-(Stripe is still supported as an alternative: `PAYMENTS_PROVIDER=stripe` with `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET`.)
+Fees (Stripe standard US pricing — confirm on stripe.com/pricing): cards 2.9% + 30¢; ACH 0.8% capped at $5; Cash App Pay per Stripe's pricing page.
+
+(PayPal is still supported as an alternative: `PAYMENTS_PROVIDER=paypal` with `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` / `PAYPAL_WEBHOOK_ID` / `PAYPAL_ENV`; webhook `/api/webhooks/paypal` for the `PAYMENT.CAPTURE.*` and `CHECKOUT.ORDER.VOIDED` events.)
 
 ## 7. DNS
 `portal.legacyindependentliving.net` → CNAME to the host. Keep the marketing site on GitHub Pages at the apex domain.

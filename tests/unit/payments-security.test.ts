@@ -21,7 +21,7 @@ import {
 } from "../../src/lib/security/crypto.ts";
 import { clientIpFrom, createRateLimiter } from "../../src/lib/security/rate-limit.ts";
 import { buildStripeSignatureHeader, verifyStripeSignature } from "../../src/lib/payments/stripe-signature.ts";
-import { buildCheckoutParams, mapStripeEvent, StripePaymentProvider, toStripeForm } from "../../src/lib/payments/stripe.ts";
+import { buildCheckoutParams, mapStripeEvent, mapStripeSession, parseStripeMethods, StripePaymentProvider, toStripeForm } from "../../src/lib/payments/stripe.ts";
 import { MockPaymentProvider } from "../../src/lib/payments/mock.ts";
 
 describe("payment rules", () => {
@@ -226,11 +226,11 @@ describe("stripe integration (offline)", () => {
     );
   });
 
-  test("mock provider mirrors production (PayPal) unless configured", async () => {
+  test("mock provider mirrors production (Stripe) unless configured", async () => {
     const { parseMethods } = await import("../../src/lib/payments/mock.ts");
-    assert.deepEqual([...parseMethods(undefined)], ["PAYPAL"]);
+    assert.deepEqual([...parseMethods(undefined)], ["DEBIT_CARD", "CREDIT_CARD", "CASH_APP", "ACH"]);
     assert.deepEqual([...parseMethods("ach, debit_card, bogus")], ["ACH", "DEBIT_CARD"]);
-    assert.deepEqual([...parseMethods("bogus")], ["PAYPAL"]);
+    assert.deepEqual([...parseMethods("bogus")], ["DEBIT_CARD", "CREDIT_CARD", "CASH_APP", "ACH"]);
   });
 
   test("mock provider", async () => {
@@ -251,5 +251,55 @@ describe("client IP for rate limiting can't be forged", () => {
     assert.equal(clientIpFrom(null, "198.51.100.4", 1), "198.51.100.4");
     assert.equal(clientIpFrom(null, null, 1), null);
     assert.equal(clientIpFrom("203.0.113.9", null, 0), "203.0.113.9", "invalid hop count falls back to 1");
+  });
+});
+
+describe("Stripe: methods, Cash App Pay, return confirmation", () => {
+  const base = { paymentId: "pay_1", residentId: "r1", amountCents: 5000, description: "Rent", successUrl: "https://x/s", cancelUrl: "https://x/c" } as const;
+
+  test("each resident choice maps to exactly one Stripe payment method type", () => {
+    assert.deepEqual(buildCheckoutParams({ ...base, method: "DEBIT_CARD" }).payment_method_types, ["card"]);
+    assert.deepEqual(buildCheckoutParams({ ...base, method: "CREDIT_CARD" }).payment_method_types, ["card"]);
+    assert.deepEqual(buildCheckoutParams({ ...base, method: "CASH_APP" }).payment_method_types, ["cashapp"]);
+    assert.deepEqual(buildCheckoutParams({ ...base, method: "ACH" }).payment_method_types, ["us_bank_account"]);
+    assert.throws(() => buildCheckoutParams({ ...base, method: "PAYPAL" }), /not a Stripe/);
+  });
+
+  test("STRIPE_METHODS controls what residents see (order kept, junk ignored)", () => {
+    assert.deepEqual([...parseStripeMethods(undefined)], ["DEBIT_CARD", "CREDIT_CARD", "CASH_APP", "ACH"]);
+    assert.deepEqual([...parseStripeMethods("ach, cash_app, ach, paypal, bogus")], ["ACH", "CASH_APP"]);
+    assert.deepEqual([...parseStripeMethods("")], ["DEBIT_CARD", "CREDIT_CARD", "CASH_APP", "ACH"]);
+  });
+
+  test("keys are validated up front", () => {
+    assert.throws(() => new StripePaymentProvider("pk_live_abc", "whsec_x"), /secret key/);
+    assert.throws(() => new StripePaymentProvider("sk_live_abc", ""), /STRIPE_WEBHOOK_SECRET/);
+    assert.equal(new StripePaymentProvider("rk_test_abc", "whsec_x").isSandbox, true);
+  });
+
+  test("returned session → succeeded with intent, amount, session id, card details", () => {
+    const ev = mapStripeSession(
+      { id: "cs_1", status: "complete", payment_status: "paid", amount_total: 5000, currency: "usd", payment_intent: { id: "pi_1", latest_charge: { payment_method_details: { type: "card", card: { brand: "visa", last4: "4242" } } } } },
+      "pay_1",
+    );
+    assert.deepEqual(ev, { kind: "succeeded", paymentId: "pay_1", providerRef: "pi_1", eventId: "stripe:return:cs_1:paid", facts: { amountCents: 5000, currency: "USD", orderId: "cs_1" }, cardBrand: "Visa", last4: "4242" });
+    const cash = mapStripeSession({ id: "cs_2", status: "complete", payment_status: "paid", amount_total: 100, currency: "usd", payment_intent: { id: "pi_2", latest_charge: { payment_method_details: { type: "cashapp" } } } }, "p");
+    assert.equal(cash.kind === "succeeded" && cash.cardBrand, "Cash App");
+    assert.equal(mapStripeSession({ id: "cs_3", status: "complete", payment_status: "unpaid", payment_intent: "pi_3" }, "p").kind, "processing");
+    assert.equal(mapStripeSession({ id: "cs_4", status: "expired", payment_status: "unpaid" }, "p").kind, "canceled");
+    assert.equal(mapStripeSession({ id: "cs_5", status: "open", payment_status: "unpaid" }, "p").kind, "ignored");
+  });
+
+  test("webhook session events carry the session id + amount; charge events don't claim a session", () => {
+    const ev = mapStripeEvent({ id: "e", type: "checkout.session.completed", data: { object: { id: "cs_9", metadata: { paymentId: "p" }, payment_intent: "pi_9", payment_status: "paid", amount_total: 75000, currency: "usd" } } });
+    assert.deepEqual(ev.kind === "succeeded" ? ev.facts : null, { amountCents: 75000, currency: "USD", orderId: "cs_9" });
+    const refund = mapStripeEvent({ id: "e2", type: "charge.refunded", data: { object: { id: "ch_1", payment_intent: "pi_9", refunded: true, metadata: { paymentId: "p" } } } });
+    assert.equal(refund.kind === "refunded" && refund.facts?.orderId, null);
+  });
+
+  test("a payment method that isn't switched on in Stripe gives the resident a clear message", async () => {
+    const off = (async () => new Response(JSON.stringify({ error: { message: "The payment method type provided: cashapp is invalid.", param: "payment_method_types" } }), { status: 400 })) as unknown as typeof fetch;
+    const stripe = new StripePaymentProvider("sk_test_x", "whsec_x", off);
+    await assert.rejects(stripe.createCheckout({ ...base, method: "CASH_APP" }), (e: Error & { userMessage?: string }) => /choose another/.test(e.userMessage ?? ""));
   });
 });

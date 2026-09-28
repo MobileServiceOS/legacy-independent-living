@@ -6,7 +6,7 @@
  *
  * Creates (once) a clearly-labelled test home "App Review test home (not a real
  * home)" with one room, and a resident in it with $1.00/month rent and a $1.00
- * sample charge, so the reviewer sees a balance, can open PayPal checkout, file a
+ * sample charge, so the reviewer sees a balance, can open Stripe checkout, file a
  * repair with a photo, and turn on notifications. Everything is flagged isDemo,
  * so it's tagged "Demo" in lists and left out of the owner's dashboard/report
  * totals. Safe to re-run: it just resets the password and tops the balance up.

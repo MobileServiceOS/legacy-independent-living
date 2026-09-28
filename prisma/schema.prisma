@@ -77,6 +77,7 @@ enum PaymentMethodType {
   CHECK
   EXTERNAL
   PAYPAL
+  CASH_APP
 }
 
 enum PaymentProviderName {

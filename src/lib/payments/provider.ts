@@ -10,7 +10,7 @@ import type { Cents } from "../../domain/money.ts";
 import type { PaymentMethodType } from "../../domain/payments.ts";
 
 export type ProviderName = "MOCK" | "STRIPE" | "PAYPAL";
-export type OnlineMethod = Extract<PaymentMethodType, "PAYPAL" | "ACH" | "DEBIT_CARD" | "CREDIT_CARD">;
+export type OnlineMethod = Extract<PaymentMethodType, "PAYPAL" | "ACH" | "DEBIT_CARD" | "CREDIT_CARD" | "CASH_APP">;
 
 export interface CheckoutRequest {
   paymentId: string;
@@ -75,6 +75,11 @@ export interface PaymentProvider {
    * PayPal, where the server must capture the approved order). Returns the result.
    */
   completeReturn?(req: { paymentId: string; providerRef: string }): Promise<ProviderEvent>;
+  /**
+   * Resident backed out: close the processor-side checkout so it can't be paid
+   * later (after we've marked the payment canceled). Throws if it was already paid.
+   */
+  cancelCheckout?(req: { paymentId: string; providerRef: string }): Promise<void>;
   refund(req: { paymentId: string; providerRef: string; amountCents: Cents }): Promise<{ refundRef: string }>;
   /** Verify + parse a raw webhook. Throws on bad signature. */
   parseWebhook(rawBody: string, headers: Headers): Promise<ProviderEvent>;
@@ -82,9 +87,12 @@ export interface PaymentProvider {
 
 export class PaymentProviderError extends Error {
   readonly retryable: boolean;
-  constructor(message: string, retryable = false) {
+  /** Safe to show the resident (e.g. "choose another payment option"). */
+  readonly userMessage?: string;
+  constructor(message: string, retryable = false, userMessage?: string) {
     super(message);
     this.name = "PaymentProviderError";
     this.retryable = retryable;
+    this.userMessage = userMessage;
   }
 }

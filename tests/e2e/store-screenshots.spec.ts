@@ -57,7 +57,7 @@ const goto = (path: string) => async (page: Page) => {
 
 const RESIDENT_SHOTS: Shot[] = [
   { name: "home", who: "resident", headline: "Your rent, always clear", sub: "See your balance and due date the moment you open the app.", go: goto("/home") },
-  { name: "pay", who: "resident", headline: "Pay rent in seconds", sub: "PayPal, bank, or card — on PayPal's secure checkout.", go: goto("/pay") },
+  { name: "pay", who: "resident", headline: "Pay rent in seconds", sub: "Card, Cash App Pay or bank — on Stripe's secure checkout.", go: goto("/pay") },
   {
     name: "receipt",
     who: "resident",

@@ -25,7 +25,7 @@ export default async function PaymentReturn({ searchParams }: { searchParams: Pr
       tone: "bg-paper-2 text-muted",
       title: "Confirming your payment…",
       body: confirming
-        ? "We're still confirming with PayPal. If money was taken, your payment will appear shortly — no need to pay again."
+        ? `We're still confirming with ${payment.provider === "PAYPAL" ? "PayPal" : "our payment processor"}. If money was taken, your payment will appear shortly — no need to pay again.`
         : "This usually takes a few seconds. This page will refresh.",
     },
     FAILED: { icon: "alert", tone: "bg-bad-bg text-bad", title: "Payment didn't go through", body: `${payment.failureReason ?? "The payment was declined."} Your balance has not changed.` },

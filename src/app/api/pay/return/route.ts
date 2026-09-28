@@ -1,4 +1,4 @@
-/** Return from PayPal: capture server-side, then show the result page. */
+/** Return from the processor (Stripe/PayPal): confirm server-side, then show the result page. */
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { env } from "@/lib/env";

@@ -21,7 +21,7 @@ import { prisma, type Tx } from "../lib/db";
 import { env } from "../lib/env";
 import { notify, notifyAdmins } from "../lib/notify";
 import { paymentsStatus } from "../lib/payments";
-import type { OnlineMethod, ProviderEvent } from "../lib/payments/provider";
+import { PaymentProviderError, type OnlineMethod, type ProviderEvent } from "../lib/payments/provider";
 import { businessToday, getSettings, paymentPolicyOf } from "../lib/settings";
 import { ForbiddenError, NotFoundError, UserError } from "./errors";
 import { postLedgerEntry, residentFinancials } from "./ledger";
@@ -86,7 +86,7 @@ export async function startOnlinePayment(
       description: `Rent payment — ${settings.businessName}`,
       reference: payment.receiptNumber,
       customerEmail: user.email,
-      // Redirect processors (PayPal) come back through a route that captures server-side.
+      // Redirect processors (Stripe, PayPal) come back through a route that confirms server-side.
       successUrl: provider.completeReturn ? `${env.appUrl}/api/pay/return?payment=${payment.id}` : `${env.appUrl}/pay/return?payment=${payment.id}`,
       cancelUrl: provider.completeReturn ? `${env.appUrl}/api/pay/cancel?payment=${payment.id}` : `${env.appUrl}/pay?canceled=1`,
     });
@@ -97,6 +97,7 @@ export async function startOnlinePayment(
       where: { id: payment.id },
       data: { status: "FAILED", failureReason: `Checkout could not start: ${(err as Error).message}`.slice(0, 300) },
     });
+    if (err instanceof PaymentProviderError && err.userMessage) throw new UserError(err.userMessage, "method");
     throw new UserError("We couldn't start the payment. Please try again in a minute.");
   }
 }
@@ -179,14 +180,15 @@ async function settleRefunded(tx: Tx, actor: Actor, payment: Payment, today: Dat
 export function eventMismatch(providerName: "MOCK" | "STRIPE" | "PAYPAL", event: Exclude<ProviderEvent, { kind: "ignored" }>, payment: Pick<Payment, "amountCents" | "providerRef" | "provider">): string | null {
   if (payment.provider !== providerName) return `event is from ${providerName} but the payment was made with ${payment.provider}`;
   const f = event.facts;
-  if (providerName === "PAYPAL") {
+  if (providerName === "PAYPAL" || providerName === "STRIPE") {
     const refs = [f?.orderId, event.providerRef].filter((r): r is string => !!r);
-    if (!payment.providerRef || !refs.includes(payment.providerRef)) return "it belongs to a different PayPal order";
+    if (!payment.providerRef || !refs.includes(payment.providerRef))
+      return providerName === "PAYPAL" ? "it belongs to a different PayPal order" : "it belongs to a different Stripe checkout";
   }
   if (f?.currency && f.currency !== "USD") return `currency ${f.currency} (expected USD)`;
   if ((event.kind === "succeeded" || event.kind === "processing") && f?.amountCents != null && f.amountCents !== payment.amountCents)
     return `amount ${formatCents(f.amountCents)} (expected ${formatCents(payment.amountCents)})`;
-  if (providerName === "PAYPAL" && event.kind === "succeeded" && f?.amountCents == null) return "PayPal did not report the captured amount";
+  if (providerName !== "MOCK" && event.kind === "succeeded" && f?.amountCents == null) return `${providerName === "PAYPAL" ? "PayPal" : "Stripe"} did not report the amount paid`;
   return null;
 }
 
@@ -444,7 +446,7 @@ export async function completeRedirectPayment(user: { id: string }, paymentId: s
     event = await provider.completeReturn({ paymentId: payment.id, providerRef: payment.providerRef });
   } catch (err) {
     console.error("[payments] capture failed", err);
-    throw new UserError("We couldn't confirm your payment with PayPal yet. If money was taken, it will show up shortly.");
+    throw new UserError(`We couldn't confirm your payment with ${provider.name === "PAYPAL" ? "PayPal" : "Stripe"} yet. If money was taken, it will show up shortly.`);
   }
   const result = await applyProviderEvent(provider.name, event);
   return result.status ?? (await prisma.payment.findUniqueOrThrow({ where: { id: payment.id } })).status;
@@ -455,5 +457,17 @@ export async function cancelRedirectPayment(user: { id: string }, paymentId: str
   const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { resident: { select: { userId: true } } } });
   if (!payment || payment.resident.userId !== user.id || payment.status !== "PENDING") return;
   if (payment.provider === "OFFLINE") return;
+  // Close the checkout on the processor first, so it can't be paid after we mark it canceled.
+  const status = paymentsStatus();
+  const provider = status.configured && status.provider.name === payment.provider ? status.provider : null;
+  if (provider?.cancelCheckout && payment.providerRef) {
+    try {
+      await provider.cancelCheckout({ paymentId: payment.id, providerRef: payment.providerRef });
+    } catch (err) {
+      // Already paid / processing on the processor side — leave it PENDING; the return or webhook settles it.
+      console.warn(`[payments] not canceling ${payment.id}: ${(err as Error).message}`);
+      return;
+    }
+  }
   await applyProviderEvent(payment.provider, { kind: "canceled", paymentId: payment.id, providerRef: payment.providerRef, eventId: `return:${payment.id}:canceled` });
 }

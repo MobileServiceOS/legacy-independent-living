@@ -15,7 +15,8 @@ const config: CapacitorConfig = {
     url: portal.toString().replace(/\/$/, ""),
     cleartext: portal.protocol === "http:",
     // Keep PayPal checkout inside the app so the return URL comes back here.
-    allowNavigation: [portal.host, "*.paypal.com", "*.paypalobjects.com"],
+    // Stripe Checkout + card 3-D Secure + bank linking stay in the app; Cash App Pay hands off to the Cash App.
+    allowNavigation: [portal.host, "checkout.stripe.com", "*.stripe.com", "*.stripe.network", "*.paypal.com", "*.paypalobjects.com"],
     errorPath: "offline.html",
   },
   ios: {

@@ -1,4 +1,4 @@
-/** Resident clicked "Cancel and return" on PayPal. */
+/** Resident backed out on the processor's checkout (Stripe / PayPal). */
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { env } from "@/lib/env";
