@@ -37,13 +37,13 @@ export function BootSplash() {
           #boot-splash .bs-word-wrap{position:relative;overflow:hidden;margin-top:14px;opacity:0;transform:translateY(8px);animation:bsWordIn .55s ease .38s forwards}
           #boot-splash .bs-word{display:block;width:min(64vw,240px);height:auto}
           #boot-splash .bs-word-wrap::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 48%,transparent 66%);transform:translateX(-120%);animation:bsShine 1.1s ease .95s 1}
-          @media (prefers-reduced-motion: no-preference){
-            #boot-splash .bs-art-wrap{animation:bsArtIn .6s cubic-bezier(.2,.8,.3,1.1) .08s forwards, bsFloat 3.2s ease-in-out .7s infinite}
-            #boot-splash .bs-family{animation:bsWalk .86s ease-in-out .7s infinite}
-          }
-          @media (prefers-reduced-motion: reduce){
-            #boot-splash .bs-word-wrap::after{animation:none}
-          }
+          /* Deliberately NOT gated behind prefers-reduced-motion: this is a sub-3s branded
+             beat (a gentle float + a tiny walking bob, a few px each), not a persistent or
+             large-motion effect, and the whole point of this component is that walk. Devices
+             with Reduce Motion on were silently falling back to a plain fade with no motion
+             at all, which reads as broken rather than accessible. */
+          #boot-splash .bs-art-wrap{animation:bsArtIn .6s cubic-bezier(.2,.8,.3,1.1) .08s forwards, bsFloat 3.2s ease-in-out .7s infinite}
+          #boot-splash .bs-family{animation:bsWalk .86s ease-in-out .7s infinite}
           @keyframes bsGlowIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
           @keyframes bsArtIn{from{opacity:0;transform:scale(.88) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
           @keyframes bsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
