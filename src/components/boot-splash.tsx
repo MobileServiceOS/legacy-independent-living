@@ -3,8 +3,9 @@
  * which matters in the native app: Capacitor loads the live portal over the network, so this
  * is what fills the gap between the native launch image and the page actually being ready).
  * Renders the real brand lockup — the illustration and the "LEGACY / INDEPENDENT LIVING"
- * wordmark, cropped from the same source artwork so they stay perfectly aligned — and animates
- * them in as two staggered pieces instead of a static logo.
+ * wordmark, cropped from the same source artwork so they stay perfectly aligned — behind a
+ * soft glow, with a gentle floating loop on the art and a one-time light sweep across the
+ * wordmark once it settles in.
  * Removes itself once the page has loaded, or after a failsafe timeout if `load` never fires.
  */
 export function BootSplash() {
@@ -20,26 +21,40 @@ export function BootSplash() {
         // byte of HTML, before any stylesheet or JS chunk has had a chance to load.
         dangerouslySetInnerHTML={{
           __html: `
-          #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#fbf8f1;transition:opacity .16s ease-out;opacity:1;pointer-events:auto}
+          #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#fbf8f1;overflow:hidden;transition:opacity .16s ease-out;opacity:1;pointer-events:auto}
           #boot-splash.boot-splash-out{opacity:0;pointer-events:none}
-          #boot-splash .bs-scene{display:flex;flex-direction:column;align-items:center;padding:0 8vw}
-          #boot-splash .bs-art{width:min(46vw,190px);height:auto;opacity:0;transform:scale(.9) translateY(4px);animation:bsArtIn .55s cubic-bezier(.2,.8,.3,1.1) .05s forwards}
-          #boot-splash .bs-word{width:min(64vw,240px);height:auto;margin-top:14px;opacity:0;transform:translateY(6px);animation:bsWordIn .5s ease .32s forwards}
+          #boot-splash .bs-glow{position:absolute;width:min(90vw,420px);height:min(90vw,420px);border-radius:50%;background:radial-gradient(circle,rgba(74,85,51,.16) 0%,rgba(74,85,51,0) 68%);opacity:0;animation:bsGlowIn 1.8s ease-out .1s forwards}
+          #boot-splash .bs-scene{position:relative;display:flex;flex-direction:column;align-items:center;padding:0 8vw}
+          #boot-splash .bs-art-wrap{opacity:0;transform:scale(.88) translateY(8px);animation:bsArtIn .6s cubic-bezier(.2,.8,.3,1.1) .08s forwards}
+          #boot-splash .bs-art{display:block;width:min(46vw,190px);height:auto}
+          #boot-splash .bs-word-wrap{position:relative;overflow:hidden;margin-top:14px;opacity:0;transform:translateY(8px);animation:bsWordIn .55s ease .38s forwards}
+          #boot-splash .bs-word{display:block;width:min(64vw,240px);height:auto}
+          #boot-splash .bs-word-wrap::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.75) 48%,transparent 66%);transform:translateX(-120%);animation:bsShine 1.1s ease .95s 1}
           @media (prefers-reduced-motion: no-preference){
-            #boot-splash .bs-art{animation:bsArtIn .55s cubic-bezier(.2,.8,.3,1.1) .05s forwards, bsBreathe 2.4s ease-in-out .6s infinite}
+            #boot-splash .bs-art-wrap{animation:bsArtIn .6s cubic-bezier(.2,.8,.3,1.1) .08s forwards, bsFloat 3.2s ease-in-out .7s infinite}
           }
-          @keyframes bsArtIn{from{opacity:0;transform:scale(.9) translateY(4px)}to{opacity:1;transform:scale(1) translateY(0)}}
-          @keyframes bsWordIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-          @keyframes bsBreathe{0%,100%{transform:scale(1)}50%{transform:scale(1.015)}}
+          @media (prefers-reduced-motion: reduce){
+            #boot-splash .bs-word-wrap::after{animation:none}
+          }
+          @keyframes bsGlowIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+          @keyframes bsArtIn{from{opacity:0;transform:scale(.88) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+          @keyframes bsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+          @keyframes bsWordIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+          @keyframes bsShine{from{transform:translateX(-120%)}to{transform:translateX(120%)}}
         `,
         }}
       />
+      <div className="bs-glow" />
       <div className="bs-scene">
-        {/* eslint-disable-next-line @next/next/no-img-element -- must paint before any JS/image
-            optimizer is available; this is the raw HTML shown before hydration. */}
-        <img className="bs-art" src="/brand/logo-mark-art.webp" alt="" width={520} height={422} />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="bs-word" src="/brand/logo-wordmark.webp" alt="Legacy Independent Living" width={680} height={275} />
+        <div className="bs-art-wrap">
+          {/* eslint-disable-next-line @next/next/no-img-element -- must paint before any JS/image
+              optimizer is available; this is the raw HTML shown before hydration. */}
+          <img className="bs-art" src="/brand/logo-mark-art.webp" alt="" width={520} height={422} />
+        </div>
+        <div className="bs-word-wrap">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="bs-word" src="/brand/logo-wordmark.webp" alt="Legacy Independent Living" width={680} height={275} />
+        </div>
       </div>
       <script
         dangerouslySetInnerHTML={{
@@ -56,12 +71,13 @@ export function BootSplash() {
             }
             // Keep the fade-out snappy: the page underneath is already fully painted by
             // 'load', so lingering here just shows a translucent splash over a busy page.
+            // Give the shine sweep (ends ~2050ms) room to land before we start fading out.
             if (document.readyState === 'complete') {
-              setTimeout(hide, 450);
+              setTimeout(hide, 900);
             } else {
-              window.addEventListener('load', function(){ setTimeout(hide, 80); });
+              window.addEventListener('load', function(){ setTimeout(hide, 550); });
             }
-            setTimeout(hide, 3500); // failsafe if 'load' never fires (e.g. offline)
+            setTimeout(hide, 3800); // failsafe if 'load' never fires (e.g. offline)
           })();
         `,
         }}
