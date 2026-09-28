@@ -42,7 +42,7 @@ export function BootSplash() {
              large-motion effect, and the whole point of this component is that walk. Devices
              with Reduce Motion on were silently falling back to a plain fade with no motion
              at all, which reads as broken rather than accessible. */
-          #boot-splash .bs-art-wrap{animation:bsArtIn .6s cubic-bezier(.2,.8,.3,1.1) .08s forwards, bsFloat 3.2s ease-in-out .7s infinite}
+          #boot-splash .bs-art-wrap{animation:bsArtIn .6s cubic-bezier(.2,.8,.3,1.1) .08s forwards, bsFloat 1.6s ease-in-out .7s infinite}
           #boot-splash .bs-family{animation:bsWalk .86s ease-in-out .7s infinite}
           @keyframes bsGlowIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
           @keyframes bsArtIn{from{opacity:0;transform:scale(.88) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
@@ -96,15 +96,18 @@ export function BootSplash() {
               el.classList.add('boot-splash-out');
               setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 200);
             }
-            // Keep the fade-out snappy: the page underneath is already fully painted by
-            // 'load', so lingering here just shows a translucent splash over a busy page.
-            // Give the shine sweep (ends ~2050ms) room to land before we start fading out.
+            // The shine sweep alone runs .95s -> 2.05s, so any hide time under ~2100ms cuts
+            // the signature animation off before it's even started — which is exactly what
+            // was happening here (900ms / 550ms), making the whole splash read as static.
+            // Always give the full sequence (glow, art, word, shine, plus a visible float/walk
+            // cycle) room to actually play before starting the fade.
+            var MIN_VISIBLE = 2300;
             if (document.readyState === 'complete') {
-              setTimeout(hide, 900);
+              setTimeout(hide, MIN_VISIBLE);
             } else {
-              window.addEventListener('load', function(){ setTimeout(hide, 550); });
+              window.addEventListener('load', function(){ setTimeout(hide, MIN_VISIBLE); });
             }
-            setTimeout(hide, 3800); // failsafe if 'load' never fires (e.g. offline)
+            setTimeout(hide, 4200); // failsafe if 'load' never fires (e.g. offline)
           })();
         `,
         }}
