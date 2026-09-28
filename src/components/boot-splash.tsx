@@ -77,6 +77,18 @@ export function BootSplash() {
           (function(){
             var el = document.getElementById('boot-splash');
             if(!el) return;
+            // In the native app, iOS shows its own static launch screen first (see
+            // native/capacitor.config.ts). Hide it the instant this element has painted
+            // so the handoff is exact, instead of letting it auto-hide on a fixed timer
+            // that races this component's own load-driven timing — on a fast connection
+            // that race can let the native screen lift only after this splash has already
+            // finished and removed itself, skipping the animation entirely.
+            try {
+              var Capacitor = window.Capacitor;
+              if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.SplashScreen) {
+                Capacitor.Plugins.SplashScreen.hide();
+              }
+            } catch (e) {}
             var hidden = false;
             function hide(){
               if (hidden) return;

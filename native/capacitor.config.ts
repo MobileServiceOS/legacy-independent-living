@@ -27,7 +27,12 @@ const config: CapacitorConfig = {
   },
   plugins: {
     PushNotifications: { presentationOptions: ["badge", "sound", "alert"] },
-    SplashScreen: { launchAutoHide: true, launchShowDuration: 600, backgroundColor: "#fbf8f1", showSpinner: false },
+    // The web BootSplash component (src/components/boot-splash.tsx) hides this native
+    // screen explicitly the instant it has painted, so the two hand off cleanly instead
+    // of racing on independent timers (which could let this hide before or after the web
+    // splash ever became visible). launchShowDuration here is only a failsafe in case the
+    // webview never loads far enough to run that call.
+    SplashScreen: { launchAutoHide: true, launchShowDuration: 2200, backgroundColor: "#fbf8f1", showSpinner: false },
   },
 };
 
