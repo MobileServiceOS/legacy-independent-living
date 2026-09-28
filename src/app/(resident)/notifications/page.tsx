@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { NotificationList } from "@/components/notification-list";
 import { PushSettings } from "@/components/push-controls";
+import { TestPushButton } from "@/components/test-push";
 import { vapidConfig } from "@/lib/push";
 import { Card } from "@/components/ui";
 import { requireResidentPage } from "@/lib/auth/session";
@@ -17,6 +18,7 @@ export default async function NotificationsPage() {
     <div className="space-y-5">
       <h1 className="text-4xl">Notifications</h1>
       <PushSettings vapidKey={vapidConfig()?.publicKey ?? null} />
+      <TestPushButton />
       <Card>
         <NotificationList items={items} timeZone={settings.timezone} />
       </Card>

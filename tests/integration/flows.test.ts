@@ -661,6 +661,21 @@ describe("push notifications: Web Push + APNs delivery", () => {
     assert.equal(d.status, "SKIPPED");
   });
 
+  test("send a test notification: refuses without devices, then pushes to the user's own device and reports it", async () => {
+    const { sendTestNotification } = await import("../../src/server/notifications");
+    await assert.rejects(sendTestNotification({ id: actor.id }, "/admin/notifications"), /Turn on notifications on this device/);
+    await m.push.registerDevice(actor.id, { kind: "APNS", token: "cd".repeat(32) });
+    const before = apnsSent.length;
+    const r = await sendTestNotification({ id: actor.id }, "/admin/notifications");
+    assert.equal(r.devices, 1);
+    assert.equal(apnsSent.length, before + 1);
+    assert.ok(apnsSent.at(-1)!.endsWith("cd".repeat(32)));
+    const d = await m.prisma.notificationDelivery.findFirstOrThrow({
+      where: { channel: "PUSH", notification: { userId: actor.id, title: "Test notification" } },
+    });
+    assert.equal(d.status, "SENT");
+  });
+
   test("owner turns off sign-in: signed out everywhere, pushes stop, can't sign in; turning back on restores", async () => {
     const r = await m.prisma.resident.findFirstOrThrow({ where: { userId } });
     const { token: sessionToken } = await m.auth.createSession(await m.prisma.user.findUniqueOrThrow({ where: { id: userId } }), {});

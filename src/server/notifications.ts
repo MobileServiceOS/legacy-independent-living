@@ -1,6 +1,8 @@
 import { audit, AUDIT_ACTIONS, type Actor } from "../lib/audit";
 import { prisma } from "../lib/db";
-import { notify } from "../lib/notify";
+import { deliverPendingNotifications, notify } from "../lib/notify";
+import { activeDeviceCount, pushConfigured } from "../lib/push";
+import { UserError } from "./errors";
 
 export async function listNotifications(userId: string, take = 50) {
   return prisma.notification.findMany({ where: { userId }, orderBy: { createdAt: "desc" }, take });
@@ -45,4 +47,30 @@ export async function sendAnnouncement(actor: Actor, input: { title: string; bod
     });
     return { recipients: residents.length };
   });
+}
+
+/**
+ * "Send a test notification" — pushes to the signed-in user's own devices and
+ * reports what actually happened (sent / failed + reason), so anyone can check
+ * that alerts reach their phone without involving residents.
+ */
+export async function sendTestNotification(user: { id: string }, link: string): Promise<{ devices: number }> {
+  if (!pushConfigured()) throw new UserError("Push notifications aren’t set up on the server yet (VAPID / APNs keys).");
+  const devices = await activeDeviceCount(user.id);
+  if (devices === 0) throw new UserError("Turn on notifications on this device first, then try again.");
+  await notify(prisma, {
+    userId: user.id,
+    type: "ACCOUNT",
+    title: "Test notification",
+    body: "Notifications are working on this device. Tap to open the app.",
+    link,
+  });
+  await deliverPendingNotifications();
+  const delivery = await prisma.notificationDelivery.findFirst({
+    where: { channel: "PUSH", notification: { userId: user.id, title: "Test notification" } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (delivery?.status === "FAILED") throw new UserError(`Couldn’t deliver the test: ${delivery.error ?? "unknown error"}`);
+  if (delivery?.status === "SKIPPED") throw new UserError("No active devices — turn notifications on again on this device.");
+  return { devices };
 }
