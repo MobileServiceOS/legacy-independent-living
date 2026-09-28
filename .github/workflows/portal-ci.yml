@@ -46,6 +46,8 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then npm ci; else npm install --no-audit --no-fund; fi
+      - name: Dependency audit (production deps, high+)
+        run: npm audit --omit=dev --audit-level=high 2>&1 | tee ci-logs/audit.log
       - name: Upload lockfile (for committing)
         if: always()
         uses: actions/upload-artifact@v4

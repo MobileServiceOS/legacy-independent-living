@@ -25,10 +25,19 @@ export function centsToPayPalValue(cents: number): string {
   return `${Math.floor(cents / 100)}.${String(cents % 100).padStart(2, "0")}`;
 }
 
+/** "750.00" → 75000. Exact string math (never floats); null when not a plain amount. */
+export function paypalValueToCents(value: unknown): number | null {
+  if (typeof value !== "string") return null;
+  const m = /^(\d{1,9})(?:\.(\d{1,2}))?$/.exec(value.trim());
+  if (!m) return null;
+  return Number(m[1]) * 100 + Number((m[2] ?? "").padEnd(2, "0"));
+}
+
 type Json = Record<string, unknown>;
 type Capture = {
   id?: string;
   status?: string;
+  amount?: { currency_code?: string; value?: string };
   custom_id?: string;
   status_details?: { reason?: string };
   links?: Array<{ rel?: string; href?: string }>;
@@ -73,19 +82,35 @@ export function buildOrderBody(req: CheckoutRequest, brandName: string): Json {
   };
 }
 
+/** The facts a capture proves: exact amount, currency and the order it belongs to. */
+export function captureFacts(capture: Capture, orderId?: string | null) {
+  return {
+    amountCents: paypalValueToCents(capture.amount?.value),
+    currency: capture.amount?.currency_code?.toUpperCase() ?? null,
+    orderId: orderId ?? capture.supplementary_data?.related_ids?.order_id ?? null,
+  };
+}
+
 /** Normalize a capture status into our event model. */
-export function mapCapture(capture: Capture, paymentId: string | null, eventId: string, card?: { last_digits?: string; brand?: string }): ProviderEvent {
+export function mapCapture(
+  capture: Capture,
+  paymentId: string | null,
+  eventId: string,
+  card?: { last_digits?: string; brand?: string },
+  orderId?: string | null,
+): ProviderEvent {
   const ref = capture.id ?? null;
+  const facts = captureFacts(capture, orderId);
   switch (capture.status) {
     case "COMPLETED":
-      return { kind: "succeeded", paymentId, providerRef: ref, eventId, cardBrand: card?.brand ? titleCase(card.brand) : "PayPal", last4: card?.last_digits ?? null };
+      return { kind: "succeeded", paymentId, providerRef: ref, eventId, cardBrand: card?.brand ? titleCase(card.brand) : "PayPal", last4: card?.last_digits ?? null, facts };
     case "PENDING":
-      return { kind: "processing", paymentId, providerRef: ref, eventId };
+      return { kind: "processing", paymentId, providerRef: ref, eventId, facts };
     case "DECLINED":
     case "FAILED":
-      return { kind: "failed", paymentId, providerRef: ref, eventId, reason: paypalReason(capture.status_details?.reason) };
+      return { kind: "failed", paymentId, providerRef: ref, eventId, reason: paypalReason(capture.status_details?.reason), facts };
     case "REFUNDED":
-      return { kind: "refunded", paymentId, providerRef: ref, eventId };
+      return { kind: "refunded", paymentId, providerRef: ref, eventId, facts };
     default:
       return { kind: "ignored", eventId, type: `capture.${capture.status ?? "unknown"}` };
   }
@@ -109,14 +134,15 @@ function paypalReason(code?: string): string {
 export function mapPayPalWebhook(event: { id: string; event_type: string; resource: Json }): ProviderEvent {
   const r = event.resource as Capture & { custom_id?: string };
   const paymentId = r.custom_id ?? null;
+  const facts = captureFacts(r);
   switch (event.event_type) {
     case "PAYMENT.CAPTURE.COMPLETED":
-      return { kind: "succeeded", paymentId, providerRef: r.id ?? null, eventId: event.id, cardBrand: "PayPal" };
+      return { kind: "succeeded", paymentId, providerRef: r.id ?? null, eventId: event.id, cardBrand: "PayPal", facts };
     case "PAYMENT.CAPTURE.PENDING":
-      return { kind: "processing", paymentId, providerRef: r.id ?? null, eventId: event.id };
+      return { kind: "processing", paymentId, providerRef: r.id ?? null, eventId: event.id, facts };
     case "PAYMENT.CAPTURE.DENIED":
     case "PAYMENT.CAPTURE.DECLINED":
-      return { kind: "failed", paymentId, providerRef: r.id ?? null, eventId: event.id, reason: paypalReason(r.status_details?.reason) };
+      return { kind: "failed", paymentId, providerRef: r.id ?? null, eventId: event.id, reason: paypalReason(r.status_details?.reason), facts };
     case "PAYMENT.CAPTURE.REFUNDED":
     case "PAYMENT.CAPTURE.REVERSED": {
       // Resource is the refund; the capture id is in its "up" link.
@@ -209,7 +235,7 @@ export class PayPalPaymentProvider implements PaymentProvider {
     if (status >= 400) throw new PaymentProviderError(json.details?.[0]?.description ?? json.message ?? `PayPal capture error ${status}`, status >= 500);
     const capture = json.purchase_units?.[0]?.payments?.captures?.[0];
     if (!capture) return { kind: "processing", paymentId: req.paymentId, providerRef: orderId, eventId: `paypal:capture:${orderId}:none` };
-    return mapCapture(capture, req.paymentId, `paypal:capture:${capture.id}:${capture.status}`, json.payment_source?.card);
+    return mapCapture(capture, req.paymentId, `paypal:capture:${capture.id}:${capture.status}`, json.payment_source?.card, json.id ?? orderId);
   }
 
   async refund(req: { paymentId: string; providerRef: string; amountCents: number }): Promise<{ refundRef: string }> {

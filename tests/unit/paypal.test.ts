@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- inspecting loosely-typed PayPal JSON in assertions */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { buildOrderBody, centsToPayPalValue, mapPayPalWebhook, PayPalPaymentProvider } from "../../src/lib/payments/paypal.ts";
+import { buildOrderBody, centsToPayPalValue, mapPayPalWebhook, PayPalPaymentProvider, paypalValueToCents } from "../../src/lib/payments/paypal.ts";
 
 type Call = { url: string; method: string; headers: Record<string, string>; body: unknown };
 
@@ -160,12 +160,12 @@ describe("PayPal webhooks", () => {
     "paypal-transmission-sig": "sig",
     "paypal-transmission-time": "2026-09-27T20:00:00Z",
   });
-  const body = JSON.stringify({ id: "WH-EVT-1", event_type: "PAYMENT.CAPTURE.COMPLETED", resource: { id: "CAP-1", status: "COMPLETED", custom_id: "pay_1" } });
+  const body = JSON.stringify({ id: "WH-EVT-1", event_type: "PAYMENT.CAPTURE.COMPLETED", resource: { id: "CAP-1", status: "COMPLETED", custom_id: "pay_1", amount: { currency_code: "USD", value: "750.00" }, supplementary_data: { related_ids: { order_id: "ORD-1" } } } });
 
   test("verified via PayPal's API with our webhook id", async () => {
     const { calls, fetchImpl } = fakePayPal({ "POST /v1/notifications/verify-webhook-signature": () => ({ json: { verification_status: "SUCCESS" } }) });
     const ev = await new PayPalPaymentProvider(cfg, fetchImpl).parseWebhook(body, headers);
-    assert.deepEqual(ev, { kind: "succeeded", paymentId: "pay_1", providerRef: "CAP-1", eventId: "WH-EVT-1", cardBrand: "PayPal" });
+    assert.deepEqual(ev, { kind: "succeeded", paymentId: "pay_1", providerRef: "CAP-1", eventId: "WH-EVT-1", cardBrand: "PayPal", facts: { amountCents: 75000, currency: "USD", orderId: "ORD-1" } });
     const sent = calls.at(-1)!.body as any;
     assert.equal(sent.webhook_id, "WH-1");
     assert.equal(sent.transmission_id, "t1");
@@ -188,5 +188,38 @@ describe("PayPal webhooks", () => {
     const refund = ev("PAYMENT.CAPTURE.REFUNDED", { id: "REF", links: [{ rel: "up", href: "https://api.paypal.com/v2/payments/captures/CAP-7" }] });
     assert.ok(refund.kind === "refunded" && refund.providerRef === "CAP-7");
     assert.equal(ev("CHECKOUT.ORDER.APPROVED", {}).kind, "ignored");
+  });
+});
+
+describe("PayPal amounts and event facts (anti-spoofing)", () => {
+  test("paypalValueToCents is exact and strict", () => {
+    assert.equal(paypalValueToCents("750.00"), 75000);
+    assert.equal(paypalValueToCents("0.01"), 1);
+    assert.equal(paypalValueToCents("12.5"), 1250);
+    assert.equal(paypalValueToCents("19.99"), 1999);
+    assert.equal(paypalValueToCents("100"), 10000);
+    for (const bad of ["-1.00", "1.234", "1e3", "", " ", "abc", "1,000.00"]) assert.equal(paypalValueToCents(bad), null, bad);
+    assert.equal(paypalValueToCents(undefined), null);
+    assert.equal(paypalValueToCents(750), null);
+  });
+
+  test("webhook capture events carry amount, currency and order id", () => {
+    const ev = mapPayPalWebhook({
+      id: "WH",
+      event_type: "PAYMENT.CAPTURE.COMPLETED",
+      resource: { id: "CAP", custom_id: "pay_1", amount: { currency_code: "usd", value: "750.00" }, supplementary_data: { related_ids: { order_id: "ORD" } } },
+    });
+    assert.equal(ev.kind, "succeeded");
+    assert.deepEqual(ev.kind === "succeeded" ? ev.facts : null, { amountCents: 75000, currency: "USD", orderId: "ORD" });
+  });
+
+  test("capture on return carries the order id we captured", async () => {
+    const fetchImpl = (async (url: string) => {
+      const path = new URL(url).pathname;
+      if (path === "/v1/oauth2/token") return new Response(JSON.stringify({ access_token: "t", expires_in: 3600 }));
+      return new Response(JSON.stringify({ id: "ORD-9", purchase_units: [{ payments: { captures: [{ id: "C9", status: "COMPLETED", amount: { currency_code: "USD", value: "20.00" } }] } }] }), { status: 201 });
+    }) as unknown as typeof fetch;
+    const ev = await new PayPalPaymentProvider({ clientId: "c", clientSecret: "s", webhookId: "w", env: "sandbox" }, fetchImpl).completeReturn({ paymentId: "p", providerRef: "ORD-9" });
+    assert.deepEqual(ev.kind === "succeeded" ? ev.facts : null, { amountCents: 2000, currency: "USD", orderId: "ORD-9" });
   });
 });

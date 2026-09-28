@@ -19,10 +19,14 @@ export async function loginAction(prev: ActionState, formData: FormData): Promis
   return runAction(prev, formData, loginSchema.extend({ next: z.string().max(500).optional() }), async ({ email, password, next }) => {
     const meta = await requestMeta();
     const key = `${meta.ip ?? "unknown"}:${email}`;
+    const accountKey = email.trim().toLowerCase();
     const rl = limiters.login.hit(key);
-    if (!rl.allowed) throw new UserError(`Too many sign-in attempts. Try again in ${Math.ceil(rl.retryAfterSeconds / 60)} minutes.`);
+    const acct = limiters.loginAccount.hit(accountKey);
+    const blocked = !rl.allowed ? rl : !acct.allowed ? acct : null;
+    if (blocked) throw new UserError(`Too many sign-in attempts. Try again in ${Math.ceil(blocked.retryAfterSeconds / 60)} minutes.`);
     const user = await authenticate(email, password);
     limiters.login.reset(key);
+    limiters.loginAccount.reset(accountKey);
     const { token, expiresAt } = await createSession(user, meta);
     await setSessionCookie(token, expiresAt);
     const home = homePathFor(user.role);

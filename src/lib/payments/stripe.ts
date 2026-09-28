@@ -60,12 +60,16 @@ export function mapStripeEvent(event: { id: string; type: string; data: { object
   const obj = event.data.object;
   const paymentId = (obj.metadata?.paymentId as string | undefined) ?? (obj.client_reference_id as string | undefined) ?? null;
   const intent = typeof obj.payment_intent === "string" ? obj.payment_intent : null;
+  const facts = {
+    amountCents: typeof obj.amount_total === "number" ? obj.amount_total : null,
+    currency: typeof obj.currency === "string" ? obj.currency.toUpperCase() : null,
+  };
   switch (event.type) {
     case "checkout.session.completed":
-      if (obj.payment_status === "paid") return { kind: "succeeded", paymentId, providerRef: intent, eventId: event.id };
-      return { kind: "processing", paymentId, providerRef: intent, eventId: event.id }; // ACH: funds not yet cleared
+      if (obj.payment_status === "paid") return { kind: "succeeded", paymentId, providerRef: intent, eventId: event.id, facts };
+      return { kind: "processing", paymentId, providerRef: intent, eventId: event.id, facts }; // ACH: funds not yet cleared
     case "checkout.session.async_payment_succeeded":
-      return { kind: "succeeded", paymentId, providerRef: intent, eventId: event.id };
+      return { kind: "succeeded", paymentId, providerRef: intent, eventId: event.id, facts };
     case "checkout.session.async_payment_failed":
       return { kind: "failed", paymentId, providerRef: intent, eventId: event.id, reason: "Bank payment failed" };
     case "checkout.session.expired":

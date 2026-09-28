@@ -32,9 +32,24 @@ export interface CheckoutSession {
   redirectUrl: string;
 }
 
+/**
+ * What the processor says the money actually was. Checked against our payment
+ * before anything settles, so an event for a different order or a different
+ * amount (e.g. a buyer-created order carrying our payment id) can never mark
+ * a payment paid.
+ */
+export interface EventFacts {
+  /** Amount in integer cents, when the event carries one. */
+  amountCents?: number | null;
+  /** ISO currency, upper-case. */
+  currency?: string | null;
+  /** The processor's order / checkout id the money belongs to. */
+  orderId?: string | null;
+}
+
 /** Provider events normalized into the only facts our ledger cares about. */
 export type ProviderEvent =
-  | { kind: "processing"; paymentId: string | null; providerRef: string | null; eventId: string }
+  | { kind: "processing"; paymentId: string | null; providerRef: string | null; eventId: string; facts?: EventFacts }
   | {
       kind: "succeeded";
       paymentId: string | null;
@@ -42,10 +57,11 @@ export type ProviderEvent =
       eventId: string;
       cardBrand?: string | null;
       last4?: string | null;
+      facts?: EventFacts;
     }
-  | { kind: "failed"; paymentId: string | null; providerRef: string | null; eventId: string; reason: string }
-  | { kind: "canceled"; paymentId: string | null; providerRef: string | null; eventId: string }
-  | { kind: "refunded"; paymentId: string | null; providerRef: string | null; eventId: string }
+  | { kind: "failed"; paymentId: string | null; providerRef: string | null; eventId: string; reason: string; facts?: EventFacts }
+  | { kind: "canceled"; paymentId: string | null; providerRef: string | null; eventId: string; facts?: EventFacts }
+  | { kind: "refunded"; paymentId: string | null; providerRef: string | null; eventId: string; facts?: EventFacts }
   | { kind: "ignored"; eventId: string; type: string };
 
 export interface PaymentProvider {

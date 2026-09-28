@@ -170,6 +170,26 @@ async function settleRefunded(tx: Tx, actor: Actor, payment: Payment, today: Dat
  * Apply a normalized provider event. Idempotent per event id (payment_events
  * has a unique index) and per payment (state machine + ledger idempotency).
  */
+/**
+ * Why a processor event can't be trusted for this payment, or null when it can.
+ * Guards against events for a different order that carry our payment id (for
+ * example a buyer-created PayPal order with custom_id copied from ours) and
+ * against partial captures being booked as full payments.
+ */
+export function eventMismatch(providerName: "MOCK" | "STRIPE" | "PAYPAL", event: Exclude<ProviderEvent, { kind: "ignored" }>, payment: Pick<Payment, "amountCents" | "providerRef" | "provider">): string | null {
+  if (payment.provider !== providerName) return `event is from ${providerName} but the payment was made with ${payment.provider}`;
+  const f = event.facts;
+  if (f?.currency && f.currency !== "USD") return `currency ${f.currency} (expected USD)`;
+  if ((event.kind === "succeeded" || event.kind === "processing") && f?.amountCents != null && f.amountCents !== payment.amountCents)
+    return `amount ${formatCents(f.amountCents)} (expected ${formatCents(payment.amountCents)})`;
+  if (providerName === "PAYPAL") {
+    if (event.kind === "succeeded" && f?.amountCents == null) return "PayPal did not report the captured amount";
+    const refs = [f?.orderId, event.providerRef].filter((r): r is string => !!r);
+    if (!payment.providerRef || !refs.includes(payment.providerRef)) return "it belongs to a different PayPal order";
+  }
+  return null;
+}
+
 export async function applyProviderEvent(providerName: "MOCK" | "STRIPE" | "PAYPAL", event: ProviderEvent): Promise<{ applied: boolean; status?: PaymentStatus }> {
   if (event.kind === "ignored") return { applied: false };
   const settings = await getSettings();
@@ -190,6 +210,22 @@ export async function applyProviderEvent(providerName: "MOCK" | "STRIPE" | "PAYP
     });
 
     payment = await lockPayment(tx, payment.id);
+
+    // The event must be about THIS payment's money: same order, same amount, USD.
+    const mismatch = eventMismatch(providerName, event, payment);
+    if (mismatch) {
+      await audit(tx, SYSTEM_ACTOR, "payment.event_mismatch", "payment", payment.id, { event: event.kind, eventId: event.eventId, reason: mismatch });
+      await notifyAdmins(tx, {
+        type: "PAYMENT_FAILED",
+        title: "Payment needs review",
+        body: `A ${providerName === "PAYPAL" ? "PayPal" : "processor"} "${event.kind}" event for payment ${payment.receiptNumber} was ignored: ${mismatch}. Nothing was posted to the ledger.`,
+        link: `/admin/payments?q=${payment.receiptNumber}`,
+        dedupeKey: `mismatch:${event.eventId}`,
+      });
+      console.warn(`[payments] ignored ${event.kind} event ${event.eventId} for ${payment.id}: ${mismatch}`);
+      return { applied: false, status: payment.status };
+    }
+
     const refUpdate = event.providerRef && event.providerRef !== payment.providerRef ? { providerRef: event.providerRef } : {};
 
     const target: Record<Exclude<ProviderEvent["kind"], "ignored">, PaymentStatus> = {

@@ -7,6 +7,7 @@ import { lookupSession, type SessionUser } from "../../server/auth";
 import { ForbiddenError } from "../../server/errors";
 import type { Actor } from "../audit";
 import { env } from "../env";
+import { clientIpFrom } from "../security/rate-limit";
 
 export const SESSION_COOKIE = "lil_session";
 
@@ -35,7 +36,7 @@ export async function clearSessionCookie(): Promise<string | undefined> {
 
 export async function requestMeta(): Promise<{ ip: string | null; userAgent: string | null }> {
   const h = await headers();
-  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
+  const ip = clientIpFrom(h.get("x-forwarded-for"), h.get("x-real-ip"));
   return { ip, userAgent: h.get("user-agent") };
 }
 

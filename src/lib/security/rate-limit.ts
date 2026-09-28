@@ -60,4 +60,19 @@ g.__lilLimiters ??= {
 };
 g.__lilLimiters.maintenance ??= createRateLimiter({ limit: 10, windowMs: 15 * 60_000 });
 g.__lilLimiters.push ??= createRateLimiter({ limit: 30, windowMs: 15 * 60_000 });
-export const limiters = g.__lilLimiters as Record<"login" | "apply" | "invite" | "pay" | "maintenance" | "push", RateLimiter>;
+// Per-account cap regardless of IP, so rotating addresses can't brute-force one password.
+g.__lilLimiters.loginAccount ??= createRateLimiter({ limit: 20, windowMs: 60 * 60_000 });
+export const limiters = g.__lilLimiters as Record<"login" | "loginAccount" | "apply" | "invite" | "pay" | "maintenance" | "push", RateLimiter>;
+
+/**
+ * Client IP from X-Forwarded-For, counted from the RIGHT: the entries a client
+ * sends itself are on the left and can be forged; the last TRUSTED_PROXY_HOPS
+ * entries were appended by our own proxies (Railway's edge = 1 hop; add 1 if
+ * Cloudflare proxying is switched on in front of it).
+ */
+export function clientIpFrom(xff: string | null, realIp: string | null, hops = Number(process.env.TRUSTED_PROXY_HOPS ?? 1)): string | null {
+  const parts = (xff ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  const n = Number.isInteger(hops) && hops > 0 ? hops : 1;
+  if (parts.length >= n) return parts[parts.length - n]!;
+  return parts[0] ?? realIp?.trim() ?? null;
+}

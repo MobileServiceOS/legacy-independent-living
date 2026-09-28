@@ -19,7 +19,7 @@ import {
   verifyPassword,
   DUMMY_PASSWORD_HASH,
 } from "../../src/lib/security/crypto.ts";
-import { createRateLimiter } from "../../src/lib/security/rate-limit.ts";
+import { clientIpFrom, createRateLimiter } from "../../src/lib/security/rate-limit.ts";
 import { buildStripeSignatureHeader, verifyStripeSignature } from "../../src/lib/payments/stripe-signature.ts";
 import { buildCheckoutParams, mapStripeEvent, StripePaymentProvider, toStripeForm } from "../../src/lib/payments/stripe.ts";
 import { MockPaymentProvider } from "../../src/lib/payments/mock.ts";
@@ -239,5 +239,17 @@ describe("stripe integration (offline)", () => {
     assert.equal(s.redirectUrl, "/pay/sandbox/pay_1");
     assert.equal((await mock.refund({ paymentId: "pay_1", providerRef: "x", amountCents: 100 })).refundRef, "mock_re_pay_1");
     await assert.rejects(mock.createCheckout({ paymentId: "p", residentId: "r", amountCents: 0, method: "ACH", description: "d", successUrl: "s", cancelUrl: "c" }));
+  });
+});
+
+describe("client IP for rate limiting can't be forged", () => {
+  test("uses the entry appended by our proxy, not the client-supplied left side", () => {
+    assert.equal(clientIpFrom("6.6.6.6, 203.0.113.9", null, 1), "203.0.113.9");
+    assert.equal(clientIpFrom("1.1.1.1, 2.2.2.2, 203.0.113.9", null, 1), "203.0.113.9");
+    assert.equal(clientIpFrom("6.6.6.6, 203.0.113.9, 172.64.0.1", null, 2), "203.0.113.9", "Cloudflare in front = 2 hops");
+    assert.equal(clientIpFrom("203.0.113.9", null, 1), "203.0.113.9");
+    assert.equal(clientIpFrom(null, "198.51.100.4", 1), "198.51.100.4");
+    assert.equal(clientIpFrom(null, null, 1), null);
+    assert.equal(clientIpFrom("203.0.113.9", null, 0), "203.0.113.9", "invalid hop count falls back to 1");
   });
 });

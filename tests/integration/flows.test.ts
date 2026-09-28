@@ -495,6 +495,7 @@ describe("PayPal: checkout → return capture → ledger → webhook replay → 
   let residentId = "";
   const paypalCalls: string[] = [];
   let captureStatus = "COMPLETED";
+  const orderAmounts = new Map<string, string>();
 
   before(async () => {
     const r = await m.prisma.resident.findFirstOrThrow({ where: { email: "pat@test.local" } });
@@ -510,9 +511,16 @@ describe("PayPal: checkout → return capture → ledger → webhook replay → 
       const body = typeof init.body === "string" && init.body.startsWith("{") ? JSON.parse(init.body) : null;
       const ok = (json: unknown, status = 200) => new Response(JSON.stringify(json), { status });
       if (path === "/v1/oauth2/token") return ok({ access_token: "t", expires_in: 3600 });
-      if (path === "/v2/checkout/orders") return ok({ id: `ORDER-${body.purchase_units[0].custom_id}`, links: [{ rel: "payer-action", href: "https://www.sandbox.paypal.com/checkoutnow?token=x" }] });
+      if (path === "/v2/checkout/orders") {
+        orderAmounts.set(`ORDER-${body.purchase_units[0].custom_id}`, body.purchase_units[0].amount.value);
+        return ok({ id: `ORDER-${body.purchase_units[0].custom_id}`, links: [{ rel: "payer-action", href: "https://www.sandbox.paypal.com/checkoutnow?token=x" }] });
+      }
       const cap = /^\/v2\/checkout\/orders\/(ORDER-[^/]+)\/capture$/.exec(path);
-      if (cap) return ok({ id: cap[1], purchase_units: [{ payments: { captures: [{ id: `CAP-${cap[1]}`, status: captureStatus }] } }] }, 201);
+      if (cap)
+        return ok(
+          { id: cap[1], purchase_units: [{ payments: { captures: [{ id: `CAP-${cap[1]}`, status: captureStatus, amount: { currency_code: "USD", value: orderAmounts.get(cap[1]) } }] } }] },
+          201,
+        );
       const refund = /^\/v2\/payments\/captures\/([^/]+)\/refund$/.exec(path);
       if (refund) return ok({ id: `REF-${refund[1]}`, status: "COMPLETED" }, 201);
       if (path === "/v1/notifications/verify-webhook-signature") return ok({ verification_status: "SUCCESS" });
@@ -551,7 +559,7 @@ describe("PayPal: checkout → return capture → ledger → webhook replay → 
       "paypal-auth-algo": "a", "paypal-cert-url": "https://api.sandbox.paypal.com/c", "paypal-transmission-id": "t",
       "paypal-transmission-sig": "s", "paypal-transmission-time": "now",
     });
-    const ev = await provider.parseWebhook(JSON.stringify({ id: "WH-1", event_type: "PAYMENT.CAPTURE.COMPLETED", resource: { id: p.providerRef, custom_id: paymentId } }), hdrs);
+    const ev = await provider.parseWebhook(JSON.stringify({ id: "WH-1", event_type: "PAYMENT.CAPTURE.COMPLETED", resource: { id: p.providerRef, custom_id: paymentId, amount: { currency_code: "USD", value: "50.00" } } }), hdrs);
     await m.payments.applyProviderEvent("PAYPAL", ev);
     assert.equal((await balanceOf(residentId)).balanceCents, 0);
     assert.equal(await m.prisma.ledgerEntry.count({ where: { paymentId, type: "PAYMENT" } }), 1);
@@ -568,9 +576,43 @@ describe("PayPal: checkout → return capture → ledger → webhook replay → 
     assert.equal(await m.payments.completeRedirectPayment(user, paymentId), "PROCESSING");
     assert.equal((await balanceOf(residentId)).status, "PENDING");
     const p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
-    await m.payments.applyProviderEvent("PAYPAL", { kind: "succeeded", paymentId: null, providerRef: p.providerRef, eventId: "WH-ECHECK-DONE" });
+    await m.payments.applyProviderEvent("PAYPAL", { kind: "succeeded", paymentId: null, providerRef: p.providerRef, eventId: "WH-ECHECK-DONE", facts: { amountCents: 5000, currency: "USD" } });
     assert.equal((await balanceOf(residentId)).balanceCents, 0);
     captureStatus = "COMPLETED";
+  });
+
+  test("SECURITY: a real PayPal event for a different order or amount can't mark our payment paid", async () => {
+    await m.residents.addManualLedgerEntry(actor, { residentId, kind: "OTHER_CHARGE", amount: 75000, effectiveDate: TODAY, description: "Rent (attack test)" });
+    const { paymentId } = await m.payments.startOnlinePayment(user, { amount: 75000, method: "PAYPAL" });
+    const provider = m.providers.getPaymentProvider();
+    const hdrs = new Headers({
+      "paypal-auth-algo": "a", "paypal-cert-url": "https://api.sandbox.paypal.com/c", "paypal-transmission-id": "t",
+      "paypal-transmission-sig": "s", "paypal-transmission-time": "now",
+    });
+    const webhook = async (id: string, resource: Record<string, unknown>) =>
+      m.payments.applyProviderEvent("PAYPAL", await provider.parseWebhook(JSON.stringify({ id, event_type: "PAYMENT.CAPTURE.COMPLETED", resource }), hdrs));
+
+    // 1) attacker's own $0.01 order that copies our payment id into custom_id
+    await webhook("WH-ATTACK-1", { id: "CAP-EVIL", custom_id: paymentId, amount: { currency_code: "USD", value: "0.01" }, supplementary_data: { related_ids: { order_id: "ORDER-EVIL" } } });
+    // 2) right order, partial amount
+    await webhook("WH-ATTACK-2", { id: "CAP-PART", custom_id: paymentId, amount: { currency_code: "USD", value: "1.00" }, supplementary_data: { related_ids: { order_id: `ORDER-${paymentId}` } } });
+    // 3) right order + amount, wrong currency
+    await webhook("WH-ATTACK-3", { id: "CAP-EUR", custom_id: paymentId, amount: { currency_code: "EUR", value: "750.00" }, supplementary_data: { related_ids: { order_id: `ORDER-${paymentId}` } } });
+    // 4) right order + amount but no amount reported
+    await webhook("WH-ATTACK-4", { id: "CAP-NOAMT", custom_id: paymentId, supplementary_data: { related_ids: { order_id: `ORDER-${paymentId}` } } });
+
+    const p = await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } });
+    assert.equal(p.status, "PENDING");
+    assert.equal(p.providerRef, `ORDER-${paymentId}`, "providerRef not overwritten by the attacker's capture");
+    assert.equal(await m.prisma.ledgerEntry.count({ where: { paymentId, type: "PAYMENT" } }), 0);
+    assert.equal((await balanceOf(residentId)).balanceCents, 75000);
+    assert.equal(await m.prisma.auditLog.count({ where: { action: "payment.event_mismatch", entityId: paymentId } }), 4);
+    assert.ok(await m.prisma.notification.findFirst({ where: { title: "Payment needs review", body: { contains: "different PayPal order" } } }));
+
+    // the genuine webhook for our order + exact amount still settles it
+    await webhook("WH-GENUINE", { id: `CAP-ORDER-${paymentId}`, custom_id: paymentId, amount: { currency_code: "USD", value: "750.00" }, supplementary_data: { related_ids: { order_id: `ORDER-${paymentId}` } } });
+    assert.equal((await m.prisma.payment.findUniqueOrThrow({ where: { id: paymentId } })).status, "SUCCEEDED");
+    assert.equal((await balanceOf(residentId)).balanceCents, 0);
   });
 
   test("resident cancels on PayPal → payment closed, nothing charged; others can't touch it", async () => {
