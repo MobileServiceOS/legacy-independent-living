@@ -44,6 +44,19 @@ export default async function SettingsPage() {
               <div className="max-w-xs">
                 <MoneyInput name="minPartialPayment" label="Minimum partial payment" defaultValue={centsToInput(s.minPartialPaymentCents)} />
               </div>
+              <Checkbox name="allowPayAhead" label="Allow residents to pay ahead (prepay future rent)" defaultChecked={s.allowPayAhead} />
+              <div className="max-w-xs">
+                <Input
+                  name="maxPayAheadMonths"
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  max={24}
+                  label="Max months ahead"
+                  defaultValue={s.maxPayAheadMonths}
+                  hint="0 disables pay-ahead even if the checkbox above is on."
+                />
+              </div>
             </fieldset>
             <SubmitButton>Save settings</SubmitButton>
           </ActionForm>

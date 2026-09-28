@@ -71,7 +71,8 @@ Admin ─ Record offline payment ─▶ SUCCEEDED OFFLINE payment + ledger + aud
 - **Adding a processor**: implement `PaymentProvider` (`createCheckout`, `refund`, `parseWebhook`) and register it in `src/lib/payments/index.ts`.
 - **Stripe setup**: `PAYMENTS_PROVIDER=stripe`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; webhook events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `checkout.session.expired`, `charge.refunded`.
 - **Autopay (architecture)**: `payment_methods` stores processor tokens with `autopay_enabled`; an autopay job would call a provider `chargeSavedMethod()` for residents with a due balance and feed the result through `applyProviderEvent()` — the same settlement path as every other payment.
-- **Partial payments**: `settings.allowPartialPayments` + `minPartialPaymentCents`. Overpayment online is refused.
+- **Partial payments**: `settings.allowPartialPayments` + `minPartialPaymentCents`.
+- **Pay ahead**: `settings.allowPayAhead` + `maxPayAheadMonths` let a resident pay more than their current balance (up to `maxPayAheadMonths × monthlyRentCents` extra) in one online payment. The excess posts as an ordinary `PAYMENT` ledger entry and shows up as `unappliedCreditCents` (`position.creditCents`) — no special-casing needed, since `allocate()` (FIFO, `src/domain/ledger.ts`) applies that credit to future `RENT_CHARGE` rows automatically as the rent engine posts them each month. `validatePaymentAmount`/`payAheadCeilingCents` (`src/domain/payments.ts`) enforce the ceiling; beyond it is refused with "most you can pay".
 
 ## 5. Authentication & authorization
 

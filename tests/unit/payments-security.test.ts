@@ -5,6 +5,7 @@ import {
   canTransition,
   isInFlight,
   makeReceiptNumber,
+  payAheadCeilingCents,
   validatePaymentAmount,
   validateRefundAmount,
 } from "../../src/domain/payments.ts";
@@ -37,17 +38,36 @@ describe("payment rules", () => {
     assert.ok(isInFlight("PROCESSING") && !isInFlight("SUCCEEDED"));
   });
 
-  test("amount validation honors partial-payment policy", () => {
+  test("amount validation honors partial-payment policy (no pay-ahead room)", () => {
     const strict = { allowPartialPayments: false, minPartialPaymentCents: 0 };
     const loose = { allowPartialPayments: true, minPartialPaymentCents: 5000 };
-    assert.equal(validatePaymentAmount(75000, 75000, strict), null);
-    assert.match(validatePaymentAmount(30000, 75000, strict)!, /full balance/);
-    assert.equal(validatePaymentAmount(30000, 75000, loose), null);
-    assert.match(validatePaymentAmount(1000, 75000, loose)!, /at least \$50\.00/);
-    assert.match(validatePaymentAmount(80000, 75000, loose)!, /most you can pay/);
-    assert.match(validatePaymentAmount(100, 0, loose)!, /no balance/);
-    assert.match(validatePaymentAmount(0, 75000, loose)!, /greater than/);
-    assert.match(validatePaymentAmount(10.5, 75000, loose)!, /greater than/);
+    assert.equal(validatePaymentAmount(75000, 75000, 75000, strict), null);
+    assert.match(validatePaymentAmount(30000, 75000, 75000, strict)!, /full balance/);
+    assert.equal(validatePaymentAmount(30000, 75000, 75000, loose), null);
+    assert.match(validatePaymentAmount(1000, 75000, 75000, loose)!, /at least \$50\.00/);
+    assert.match(validatePaymentAmount(80000, 75000, 75000, loose)!, /most you can pay/);
+    assert.match(validatePaymentAmount(100, 0, 0, loose)!, /no balance/);
+    assert.match(validatePaymentAmount(0, 75000, 75000, loose)!, /greater than/);
+    assert.match(validatePaymentAmount(10.5, 75000, 75000, loose)!, /greater than/);
+  });
+
+  test("pay-ahead: overpaying up to the ceiling is allowed and skips the partial-payment floor", () => {
+    const policy = { allowPartialPayments: true, minPartialPaymentCents: 5000 };
+    // $750 due, $700/mo rent, up to 3 months ahead allowed → ceiling is $750 + $2100 = $2850.
+    assert.equal(validatePaymentAmount(75000, 75000, 285000, policy), null); // exactly the balance
+    assert.equal(validatePaymentAmount(145000, 75000, 285000, policy), null); // balance + 1 month
+    assert.equal(validatePaymentAmount(285000, 75000, 285000, policy), null); // balance + full 3 months
+    assert.match(validatePaymentAmount(285001, 75000, 285000, policy)!, /most you can pay/);
+    // Nothing currently due, but paying ahead is still allowed up to the ceiling.
+    assert.equal(validatePaymentAmount(70000, 0, 210000, policy), null);
+    assert.match(validatePaymentAmount(210001, 0, 210000, policy)!, /most you can pay/);
+  });
+
+  test("payAheadCeilingCents", () => {
+    assert.equal(payAheadCeilingCents(70000, { allowPayAhead: true, maxPayAheadMonths: 3 }), 210000);
+    assert.equal(payAheadCeilingCents(70000, { allowPayAhead: false, maxPayAheadMonths: 3 }), 0);
+    assert.equal(payAheadCeilingCents(70000, { allowPayAhead: true, maxPayAheadMonths: 0 }), 0);
+    assert.equal(payAheadCeilingCents(0, { allowPayAhead: true, maxPayAheadMonths: 3 }), 0);
   });
 
   test("refunds are full-only", () => {

@@ -11,6 +11,7 @@ import {
   canTransition,
   isOnlineMethod,
   makeReceiptNumber,
+  payAheadCeilingCents,
   PAYMENT_METHOD_LABELS,
   validatePaymentAmount,
   validateRefundAmount,
@@ -60,9 +61,11 @@ export async function startOnlinePayment(
     const resident = await tx.resident.findUnique({ where: { userId: user.id } });
     if (!resident) throw new ForbiddenError();
     await tx.$queryRaw`SELECT id FROM residents WHERE id = ${resident.id} FOR UPDATE`;
-    const { position } = await residentFinancials(tx, resident.id, today);
+    const { position, schedule } = await residentFinancials(tx, resident.id, today);
     const payable = position.balanceCents - position.pendingCents;
-    const problem = validatePaymentAmount(input.amount, payable, paymentPolicyOf(settings));
+    const policy = paymentPolicyOf(settings);
+    const maxPayableCents = Math.max(payable, 0) + payAheadCeilingCents(schedule?.monthlyRentCents ?? 0, policy);
+    const problem = validatePaymentAmount(input.amount, payable, maxPayableCents, policy);
     if (problem) throw new UserError(problem, "amount");
     return tx.payment.create({
       data: {

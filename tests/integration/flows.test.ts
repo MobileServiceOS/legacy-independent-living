@@ -200,6 +200,9 @@ describe("payment edge cases", () => {
   let residentId = "";
   let userId = "";
   before(async () => {
+    // These tests probe the exact "you have this much balance" boundary — pay-ahead
+    // (which intentionally allows overpaying) is tested in its own describe below.
+    await m.prisma.settings.update({ where: { id: 1 }, data: { allowPayAhead: false } });
     const r = await m.residents.placeResident(actor, {
       firstName: "Pat",
       lastName: "Lee",
@@ -273,6 +276,79 @@ describe("payment edge cases", () => {
   test("another resident's payment can't be completed", async () => {
     const other = await m.prisma.payment.findFirstOrThrow({ where: { residentId: { not: residentId } } });
     await assert.rejects(m.payments.completeSandboxPayment({ id: userId }, other.id, "succeed"), /not found/);
+  });
+
+  after(async () => {
+    await m.prisma.settings.update({ where: { id: 1 }, data: { allowPayAhead: true } });
+  });
+});
+
+describe("pay ahead: overpaying banks a credit that auto-applies to future rent", () => {
+  let residentId = "";
+  let userId = "";
+
+  before(async () => {
+    const property = await m.props.saveProperty(actor, undefined, {
+      name: "Legacy House #2",
+      addressLine1: "2 Test St",
+      addressLine2: null,
+      city: "Houston",
+      state: "TX",
+      postalCode: "77002",
+      notes: null,
+    });
+    const room = await m.props.saveRoom(actor, { propertyId: property.id, name: "Ahead Room", defaultRent: 50000, notes: null });
+    // Mid-month due day so the 7-day lead window doesn't also pull in October at move-in —
+    // exactly one month's rent (September) is due today.
+    const r = await m.residents.placeResident(actor, {
+      firstName: "Ada",
+      lastName: "Payne",
+      email: "ada@test.local",
+      phone: "555-010-3003",
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      emergencyContactRelation: null,
+      notes: null,
+      roomId: room.id,
+      monthlyRent: 50000,
+      moveInDate: TODAY,
+      dueDay: 15,
+    });
+    residentId = r.residentId;
+    userId = (await m.prisma.resident.findUniqueOrThrow({ where: { id: residentId } })).userId!;
+    await m.prisma.settings.update({ where: { id: 1 }, data: { allowPayAhead: true, maxPayAheadMonths: 2 } });
+  });
+
+  test("current balance plus up to 2 months of rent can be paid in one payment; beyond that is refused", async () => {
+    assert.equal((await balanceOf(residentId)).balanceCents, 50000);
+    // $500 due + 2 x $500/mo ceiling = $1500 max.
+    await assert.rejects(m.payments.startOnlinePayment({ id: userId, email: "ada@test.local" }, { amount: 150001, method: "DEBIT_CARD" }), /most you can pay/);
+    const { paymentId } = await m.payments.startOnlinePayment({ id: userId, email: "ada@test.local" }, { amount: 150000, method: "DEBIT_CARD" });
+    await m.payments.completeSandboxPayment({ id: userId }, paymentId, "succeed");
+    const pos = await balanceOf(residentId);
+    assert.equal(pos.balanceCents, -100000); // $500 due paid off, $1000 banked as credit
+    assert.equal(pos.status, "PAID");
+    assert.equal(pos.creditCents, 100000);
+  });
+
+  test("the banked credit auto-pays October and November rent as the rent engine posts them", async () => {
+    await m.rent.runRentEngine({ today: "2026-10-28" }); // posts Oct (due day 15) — 7-day lead window
+    let pos = await balanceOf(residentId);
+    assert.equal(pos.status, "PAID");
+    assert.equal(pos.creditCents, 50000); // $1000 credit − $500 October rent
+    await m.rent.runRentEngine({ today: "2026-11-28" }); // posts Nov — exhausts the credit exactly
+    pos = await balanceOf(residentId);
+    assert.equal(pos.status, "PAID");
+    assert.equal(pos.creditCents, 0);
+    await assert.rejects(m.payments.startOnlinePayment({ id: userId, email: "ada@test.local" }, { amount: 100, method: "DEBIT_CARD" }), /no balance/);
+  });
+
+  test("paying ahead is refused when the setting is off", async () => {
+    await m.prisma.settings.update({ where: { id: 1 }, data: { allowPayAhead: false } });
+    await m.rent.runRentEngine({ today: "2026-12-28" }); // posts December rent — now genuinely due
+    assert.equal((await balanceOf(residentId)).balanceCents, 50000);
+    await assert.rejects(m.payments.startOnlinePayment({ id: userId, email: "ada@test.local" }, { amount: 100000, method: "DEBIT_CARD" }), /most you can pay/);
+    await m.prisma.settings.update({ where: { id: 1 }, data: { allowPayAhead: true, maxPayAheadMonths: 6 } });
   });
 });
 

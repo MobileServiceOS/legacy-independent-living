@@ -625,6 +625,8 @@ model Settings {
   lateFeeCents           Int      @default(0) @map("late_fee_cents")
   allowPartialPayments   Boolean  @default(true) @map("allow_partial_payments")
   minPartialPaymentCents Int      @default(2500) @map("min_partial_payment_cents")
+  allowPayAhead          Boolean  @default(true) @map("allow_pay_ahead")
+  maxPayAheadMonths      Int      @default(6) @map("max_pay_ahead_months")
   onlinePaymentsEnabled  Boolean  @default(true) @map("online_payments_enabled")
   supportPhone           String?  @map("support_phone")
   supportEmail           String?  @map("support_email")

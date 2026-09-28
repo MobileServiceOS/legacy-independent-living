@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ActionForm, MoneyInput, RadioCards, SubmitButton, Hidden } from "@/components/form";
+import { ActionForm, RadioCards, SubmitButton, Hidden } from "@/components/form";
+import { PayAheadAmount } from "@/components/pay-ahead";
 import { Icon } from "@/components/icons";
 import { BackLink, Card, Notice } from "@/components/ui";
 import { formatLong } from "@/domain/dates";
-import { centsToInput, formatCents } from "@/domain/money";
+import { formatCents } from "@/domain/money";
+import { payAheadCeilingCents } from "@/domain/payments";
 import { requireResidentPage } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
 import { paymentsStatus, type PaymentProvider } from "@/lib/payments";
-import { businessToday, getSettings } from "@/lib/settings";
+import { businessToday, getSettings, paymentPolicyOf } from "@/lib/settings";
 import { residentFinancials } from "@/server/ledger";
 import { startPaymentAction } from "@/app/actions/resident";
 
@@ -27,9 +29,14 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
   const user = await requireResidentPage();
   const { canceled } = await searchParams;
   const settings = await getSettings();
-  const { position } = await residentFinancials(prisma, user.residentId, businessToday(settings));
+  const { position, schedule } = await residentFinancials(prisma, user.residentId, businessToday(settings));
   const payable = position.balanceCents - position.pendingCents;
   const payments = paymentsStatus();
+  const policy = paymentPolicyOf(settings);
+  const monthlyRentCents = schedule?.monthlyRentCents ?? 0;
+  const aheadCeilingCents = payAheadCeilingCents(monthlyRentCents, policy);
+  const onlineAvailable = settings.onlinePaymentsEnabled && payments.configured;
+  const canPayAnything = payable > 0 || (onlineAvailable && aheadCeilingCents > 0);
 
   return (
     <div className="space-y-5">
@@ -37,7 +44,7 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
       <h1 className="text-4xl">Pay rent</h1>
       {canceled ? <Notice tone="neutral">Payment canceled — nothing was charged.</Notice> : null}
 
-      {payable <= 0 ? (
+      {!canPayAnything ? (
         <Card>
           <p className="flex items-center gap-2 text-lg font-bold text-ok">
             <Icon name="check" className="size-6" /> Nothing to pay right now.
@@ -47,12 +54,19 @@ export default async function PayPage({ searchParams }: { searchParams: Promise<
             Back to home
           </Link>
         </Card>
-      ) : !settings.onlinePaymentsEnabled || !payments.configured ? (
+      ) : !onlineAvailable ? (
         <Notice tone="warn" title={payments.configured ? "Online payments are paused" : "Online payments aren’t available yet"}>
           Please pay the office directly{settings.supportPhone ? ` or call ${settings.supportPhone}` : ""}.
         </Notice>
       ) : (
-        <PayForm payable={payable} nextDueDate={position.nextDueDate} provider={payments.provider} settings={settings} />
+        <PayForm
+          payable={payable}
+          nextDueDate={position.nextDueDate}
+          provider={payments.provider}
+          settings={settings}
+          monthlyRentCents={monthlyRentCents}
+          maxPayAheadMonths={policy.allowPayAhead ? policy.maxPayAheadMonths : 0}
+        />
       )}
     </div>
   );
@@ -63,32 +77,32 @@ function PayForm({
   nextDueDate,
   provider,
   settings,
+  monthlyRentCents,
+  maxPayAheadMonths,
 }: {
   payable: number;
   nextDueDate: string | null;
   provider: PaymentProvider;
   settings: Awaited<ReturnType<typeof getSettings>>;
+  monthlyRentCents: number;
+  maxPayAheadMonths: number;
 }) {
   const sandbox = provider.isSandbox;
   return (
     <Card>
           <div className="mb-5 rounded-xl bg-paper-2 p-4">
             <p className="text-sm font-extrabold uppercase tracking-wider text-muted">Amount due</p>
-            <p className="font-serif text-4xl font-semibold tabular-nums">{formatCents(payable)}</p>
-            {nextDueDate ? <p className="text-muted">Due {formatLong(nextDueDate)}</p> : null}
+            <p className="font-serif text-4xl font-semibold tabular-nums">{formatCents(Math.max(payable, 0))}</p>
+            {payable <= 0 ? <p className="text-muted">You&rsquo;re all paid up.</p> : nextDueDate ? <p className="text-muted">Due {formatLong(nextDueDate)}</p> : null}
           </div>
           <ActionForm action={startPaymentAction} className="space-y-5">
-            {settings.allowPartialPayments ? (
-              <MoneyInput
-                name="amount"
-                label="How much would you like to pay?"
-                defaultValue={centsToInput(payable)}
-                hint={`Full balance is ${formatCents(payable)}. You can pay part of it (at least ${formatCents(Math.min(settings.minPartialPaymentCents, payable))}).`}
-                required
-              />
-            ) : (
-              <Hidden name="amount" value={centsToInput(payable)} />
-            )}
+            <PayAheadAmount
+              payableCents={payable}
+              monthlyRentCents={monthlyRentCents}
+              maxMonths={maxPayAheadMonths}
+              allowPartialPayments={settings.allowPartialPayments}
+              minPartialPaymentCents={settings.minPartialPaymentCents}
+            />
             {provider.methods.length > 1 ? (
               <RadioCards
                 name="method"

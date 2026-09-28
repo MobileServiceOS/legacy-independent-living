@@ -12,6 +12,8 @@ export async function updateSettings(
     lateFee: number;
     allowPartialPayments: boolean;
     minPartialPayment: number;
+    allowPayAhead: boolean;
+    maxPayAheadMonths: number;
     onlinePaymentsEnabled: boolean;
     supportPhone: string | null;
     supportEmail: string | null;
@@ -27,6 +29,8 @@ export async function updateSettings(
       lateFeeCents: input.lateFee,
       allowPartialPayments: input.allowPartialPayments,
       minPartialPaymentCents: input.minPartialPayment,
+      allowPayAhead: input.allowPayAhead,
+      maxPayAheadMonths: input.maxPayAheadMonths,
       onlinePaymentsEnabled: input.onlinePaymentsEnabled,
       supportPhone: input.supportPhone,
       supportEmail: input.supportEmail,

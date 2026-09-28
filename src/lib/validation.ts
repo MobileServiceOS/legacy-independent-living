@@ -260,6 +260,8 @@ export const settingsSchema = z.object({
   lateFee: dollarsOrZero("Late fee"),
   allowPartialPayments: checkbox,
   minPartialPayment: dollarsOrZero("Minimum partial payment"),
+  allowPayAhead: checkbox,
+  maxPayAheadMonths: intIn("Max months ahead", 0, 24),
   onlinePaymentsEnabled: checkbox,
   supportPhone: optional(30),
   supportEmail: z

@@ -6,11 +6,12 @@ import { vapidConfig } from "@/lib/push";
 import { Card, DemoTag, Money, Notice, PaymentStatusBadge, RentStatusBadge } from "@/components/ui";
 import { dateOnlyFromDbDate, formatLong, formatShort } from "@/domain/dates";
 import { formatCents } from "@/domain/money";
-import { PAYMENT_METHOD_LABELS } from "@/domain/payments";
+import { PAYMENT_METHOD_LABELS, payAheadCeilingCents } from "@/domain/payments";
 import { requireResidentPage } from "@/lib/auth/session";
 import { paymentDate } from "@/lib/format";
 import { prisma } from "@/lib/db";
-import { businessToday, getSettings } from "@/lib/settings";
+import { paymentsStatus } from "@/lib/payments";
+import { businessToday, getSettings, paymentPolicyOf } from "@/lib/settings";
 import { residentFinancials } from "@/server/ledger";
 import { ensureRentEngineCurrent } from "@/server/rent-engine";
 
@@ -36,6 +37,9 @@ export default async function ResidentHome() {
   const assignment = resident.assignments[0];
   const payable = position.balanceCents - position.pendingCents;
   const paidUp = position.status === "PAID";
+  const policy = paymentPolicyOf(settings);
+  const aheadCeilingCents = payAheadCeilingCents(schedule?.monthlyRentCents ?? 0, policy);
+  const canPayAhead = settings.onlinePaymentsEnabled && paymentsStatus().configured && aheadCeilingCents > 0;
 
   return (
     <div className="space-y-5">
@@ -104,6 +108,12 @@ export default async function ResidentHome() {
           ) : null}
           {payable > 0 && !settings.onlinePaymentsEnabled ? (
             <Notice tone="warn">Online payments are paused. Please pay the office directly{settings.supportPhone ? ` or call ${settings.supportPhone}` : ""}.</Notice>
+          ) : null}
+          {payable <= 0 && canPayAhead ? (
+            <Link href="/pay" className="btn-secondary min-h-14 w-full text-lg" data-testid="pay-ahead">
+              Pay ahead on rent
+              <Icon name="arrowRight" />
+            </Link>
           ) : null}
         </div>
       </section>

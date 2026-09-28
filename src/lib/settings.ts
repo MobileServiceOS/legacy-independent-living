@@ -15,7 +15,12 @@ export function rentSettingsOf(s: Settings): RentSettings {
 }
 
 export function paymentPolicyOf(s: Settings): PaymentPolicy {
-  return { allowPartialPayments: s.allowPartialPayments, minPartialPaymentCents: s.minPartialPaymentCents };
+  return {
+    allowPartialPayments: s.allowPartialPayments,
+    minPartialPaymentCents: s.minPartialPaymentCents,
+    allowPayAhead: s.allowPayAhead,
+    maxPayAheadMonths: s.maxPayAheadMonths,
+  };
 }
 
 /** "Today" in the business timezone. Override with APP_TODAY=YYYY-MM-DD for demos/tests. */

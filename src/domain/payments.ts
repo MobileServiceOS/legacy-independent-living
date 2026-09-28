@@ -66,21 +66,41 @@ export interface PaymentPolicy {
   allowPartialPayments: boolean;
   /** Smallest partial payment accepted when partial payments are enabled. */
   minPartialPaymentCents: Cents;
+  /** Residents may pay ahead of their current balance (future rent, paid in advance). */
+  allowPayAhead: boolean;
+  /** Cap on how many months of future rent can be prepaid in one payment. */
+  maxPayAheadMonths: number;
 }
 
 /**
- * Validate an online payment amount against the current balance.
- * Overpayment is never allowed online (it would create unexplained credit).
+ * How far ahead of the current balance a resident may pay, in cents — 0 when
+ * pay-ahead is off, capped at 0 months, or there's no active monthly rent to
+ * project against.
  */
-export function validatePaymentAmount(amountCents: Cents, balanceCents: Cents, policy: PaymentPolicy): string | null {
+export function payAheadCeilingCents(monthlyRentCents: Cents, policy: Pick<PaymentPolicy, "allowPayAhead" | "maxPayAheadMonths">): Cents {
+  if (!policy.allowPayAhead || monthlyRentCents <= 0 || policy.maxPayAheadMonths <= 0) return 0;
+  return monthlyRentCents * policy.maxPayAheadMonths;
+}
+
+/**
+ * Validate an online payment amount against the current balance. Paying more
+ * than what's currently due is allowed up to `maxPayableCents` (the balance
+ * plus any pay-ahead allowance, see `payAheadCeilingCents`) — the excess is
+ * banked as a ledger credit and applies automatically to rent as it posts.
+ */
+export function validatePaymentAmount(
+  amountCents: Cents,
+  payableCents: Cents,
+  maxPayableCents: Cents,
+  policy: Pick<PaymentPolicy, "allowPartialPayments" | "minPartialPaymentCents">,
+): string | null {
   if (!Number.isSafeInteger(amountCents) || amountCents <= 0) return "Enter an amount greater than $0.00";
-  if (balanceCents <= 0) return "You have no balance due right now";
-  if (amountCents > balanceCents) return `The most you can pay right now is ${formatCents(balanceCents)}`;
-  if (amountCents < balanceCents) {
-    if (!policy.allowPartialPayments) return `Please pay the full balance of ${formatCents(balanceCents)}`;
-    if (amountCents < policy.minPartialPaymentCents)
-      return `Partial payments must be at least ${formatCents(policy.minPartialPaymentCents)}`;
-  }
+  if (maxPayableCents <= 0) return "You have no balance due right now";
+  if (amountCents > maxPayableCents) return `The most you can pay right now is ${formatCents(maxPayableCents)}`;
+  if (amountCents >= payableCents) return null; // paying the full balance, or paying ahead of it
+  if (!policy.allowPartialPayments) return `Please pay the full balance of ${formatCents(payableCents)}`;
+  if (amountCents < policy.minPartialPaymentCents)
+    return `Partial payments must be at least ${formatCents(policy.minPartialPaymentCents)}`;
   return null;
 }
 
