@@ -27,6 +27,7 @@
     "verify": "npm run typecheck && npm run lint && npm test",
     "typecheck:core": "tsc -p tsconfig.core.json",
     "owner:create": "tsx scripts/create-owner.ts",
+    "owner:change-email": "tsx scripts/change-owner-email.ts",
     "push:keys": "node scripts/generate-vapid-keys.mjs",
     "review:account": "tsx scripts/create-review-account.ts"
   },
