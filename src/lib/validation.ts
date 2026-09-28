@@ -5,6 +5,7 @@ import { isDateOnly } from "../domain/dates";
 import { HOUSING_SITUATIONS, CONTACT_PREFERENCES, APPLICATION_STATUSES } from "../domain/applications";
 import { MANUAL_ROOM_STATUSES } from "../domain/rooms";
 import { MAINTENANCE_CATEGORIES, MAINTENANCE_PRIORITIES, MAINTENANCE_STATUSES } from "../domain/maintenance";
+import type { OnlineMethod } from "./payments/provider";
 
 const trimmed = (max = 200) => z.string().trim().max(max);
 const required = (label: string, max = 200) => trimmed(max).min(1, `${label} is required`);
@@ -226,9 +227,11 @@ export const offlinePaymentSchema = z.object({
   note: optional(500),
 });
 
+const ONLINE_METHOD_VALUES = ["PAYPAL", "ACH", "DEBIT_CARD", "CREDIT_CARD", "CASH_APP"] as const satisfies readonly OnlineMethod[];
+
 export const onlinePaymentSchema = z.object({
   amount: dollars(),
-  method: z.enum(["PAYPAL", "ACH", "DEBIT_CARD", "CREDIT_CARD"], { errorMap: () => ({ message: "Choose how you'd like to pay" }) }),
+  method: z.enum(ONLINE_METHOD_VALUES, { errorMap: () => ({ message: "Choose how you'd like to pay" }) }),
 });
 
 export const refundSchema = z.object({ paymentId: id, reason: required("Reason", 300) });

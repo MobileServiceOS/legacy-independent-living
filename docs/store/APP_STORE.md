@@ -61,7 +61,7 @@ CI re-seeds demo data, captures every device, and commits the results. List of s
 
 **Support URL**: `https://legacyindependentliving.net/contact/`
 **Marketing URL**: `https://legacyindependentliving.net`
-**Privacy Policy URL**: `https://portal.legacyindependentliving.net/privacy` (built into the portal — review the wording before submitting).
+**Privacy Policy URL**: `https://legacy-portal-production.up.railway.app/privacy` (built into the portal — review the wording before submitting; switch to the custom domain URL once DNS is set up).
 
 ## App Review — sign-in + notes
 
