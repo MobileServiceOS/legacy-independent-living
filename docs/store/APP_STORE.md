@@ -37,6 +37,7 @@ CI re-seeds demo data, captures every device, and commits the results. List of s
 > FOR RESIDENTS
 > • See your current balance and next due date the moment you open the app
 > • Pay rent in seconds with a debit or credit card, Cash App Pay, or your bank account
+> • Get ahead on rent — pay several months in advance in one payment
 > • Get an instant receipt for every payment, ready to print or save
 > • View your full payment history and account activity
 > • Report a repair with photos and follow it from request to done
@@ -61,7 +62,7 @@ CI re-seeds demo data, captures every device, and commits the results. List of s
 
 **Support URL**: `https://legacyindependentliving.net/contact/`
 **Marketing URL**: `https://legacyindependentliving.net`
-**Privacy Policy URL**: `https://legacy-portal-production.up.railway.app/privacy` (built into the portal — review the wording before submitting; switch to the custom domain URL once DNS is set up).
+**Privacy Policy URL**: `https://legacy-portal-production.up.railway.app/privacy` (built into the portal — review the wording before submitting; switch to `https://portal.legacyindependentliving.net/privacy` once the custom domain DNS/cert is confirmed live).
 
 ## App Review — sign-in + notes
 
