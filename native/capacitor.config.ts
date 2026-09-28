@@ -5,7 +5,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
  * with native push notifications (APNs) and camera/photo access for repair photos.
  * PORTAL_URL lets you point a dev build at a staging server.
  */
-const portal = new URL(process.env.PORTAL_URL ?? "https://legacy-portal-production.up.railway.app");
+const portal = new URL(process.env.PORTAL_URL ?? "https://portal.legacyindependentliving.net");
 
 const config: CapacitorConfig = {
   appId: "net.legacyindependentliving.app",
