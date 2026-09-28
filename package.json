@@ -29,7 +29,8 @@
     "owner:create": "tsx scripts/create-owner.ts",
     "owner:change-email": "tsx scripts/change-owner-email.ts",
     "push:keys": "node scripts/generate-vapid-keys.mjs",
-    "review:account": "tsx scripts/create-review-account.ts"
+    "review:account": "tsx scripts/create-review-account.ts",
+    "demo:purge": "tsx scripts/purge-demo-data.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
