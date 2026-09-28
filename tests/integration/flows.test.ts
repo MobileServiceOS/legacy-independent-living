@@ -788,3 +788,33 @@ describe("change password (signed-in user)", () => {
     assert.ok(await m.prisma.auditLog.findFirst({ where: { action: "user.password_changed", entityId: owner.id } }));
   });
 });
+
+describe("App Review / demo records stay out of the owner's totals", () => {
+  test("a demo home + resident are excluded from dashboard and reports once real homes exist", async () => {
+    const before = await m.queries.adminDashboard(TODAY);
+    const beforeReport = await m.queries.reports(TODAY, {});
+    const demo = await m.prisma.property.create({
+      data: { name: "App Review test home (not a real home)", addressLine1: "x", city: "Houston", state: "TX", postalCode: "77002", isDemo: true },
+    });
+    const room = await m.prisma.room.create({ data: { propertyId: demo.id, name: "Room A", defaultRentCents: 100, isDemo: true } });
+    const { residentId } = await m.residents.placeResident(actor, {
+      firstName: "App", lastName: "Reviewer", email: "appreview@test.local", phone: "555-555-0100",
+      emergencyContactName: null, emergencyContactPhone: null, emergencyContactRelation: null, notes: null,
+      roomId: room.id, monthlyRent: 100, moveInDate: TODAY, dueDay: 1,
+    });
+    await m.prisma.resident.update({ where: { id: residentId }, data: { isDemo: true } });
+    await m.residents.addManualLedgerEntry(actor, { residentId, kind: "OTHER_CHARGE", amount: 100, effectiveDate: TODAY, description: "Sample charge for App Review" });
+
+    const after = await m.queries.adminDashboard(TODAY);
+    assert.deepEqual(after.occupancy, before.occupancy, "demo room not counted");
+    assert.equal(after.totalResidents, before.totalResidents, "demo resident not counted");
+    assert.ok(!after.rentDue.some((r) => r.id === residentId));
+    const afterReport = await m.queries.reports(TODAY, {});
+    assert.deepEqual(afterReport.collection, beforeReport.collection);
+    assert.ok(!afterReport.properties.some((p) => p.id === demo.id));
+    // …but the reviewer is still a normal resident with a balance to pay
+    assert.equal((await balanceOf(residentId)).balanceCents >= 100, true);
+    // and still listed (tagged Demo) for the owner to manage
+    assert.ok((await m.queries.residentRows(TODAY)).some((r) => r.id === residentId && r.isDemo));
+  });
+});

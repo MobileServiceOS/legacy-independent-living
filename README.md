@@ -107,6 +107,9 @@ Full details — schema, routes, auth model, payment architecture, rent engine, 
 - A payment only hits the ledger on **SUCCEEDED**; pending ACH shows as *Payment pending*; refunds post a `REFUND` entry.
 - Webhooks are signature-verified (raw body, 5-min tolerance, constant-time compare) and de-duplicated by event id.
 
+### Security
+- How payments, accounts and the app are protected, and how each is tested: [`docs/SECURITY.md`](docs/SECURITY.md).
+
 ### Push notifications
 - Web Push (browsers + Home-Screen PWA on iOS 16.4+) and Apple Push (native iOS app in `native/`), implemented without dependencies and verified against the RFC 8291 test vector.
 - Sent within a second of the event; `/api/cron/notify` is the backstop. Details: `docs/ARCHITECTURE.md` §7, setup: `docs/DEPLOYMENT.md` §9.
@@ -127,6 +130,7 @@ Full details — schema, routes, auth model, payment architecture, rent engine, 
 | `npm run rent:run` | post due rent + late fees + send reminders (also `POST /api/cron/rent`) |
 | `npm run icons` | regenerate PWA icons from `public/brand/logo-mark.png` |
 | `npm run push:keys` | generate Web Push (VAPID) keys |
+| `npm run review:account` | create/reset the App Store review login (`REVIEW_PASSWORD`) in a test home excluded from totals |
 | `npm run owner:create` | create the first owner account (`OWNER_EMAIL`, `OWNER_NAME`, `OWNER_PASSWORD`) |
 
 ## Adding the portal to the website

@@ -9,7 +9,8 @@
     "ios:open": "cap open ios",
     "ios:assets": "capacitor-assets generate --ios --iconBackgroundColor '#fbf8f1' --splashBackgroundColor '#fbf8f1'",
     "ios:patch": "node scripts/patch-ios.mjs",
-    "ios:setup": "npm run ios:add && npm run ios:assets && npm run ios:patch && npm run ios:sync"
+    "ios:setup": "npm run ios:add && npm run ios:assets && npm run ios:patch && npm run ios:sync",
+    "ios:preflight": "node scripts/preflight.mjs"
   },
   "dependencies": {
     "@capacitor/app": "^7.0.0",

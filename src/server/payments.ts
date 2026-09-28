@@ -179,14 +179,14 @@ async function settleRefunded(tx: Tx, actor: Actor, payment: Payment, today: Dat
 export function eventMismatch(providerName: "MOCK" | "STRIPE" | "PAYPAL", event: Exclude<ProviderEvent, { kind: "ignored" }>, payment: Pick<Payment, "amountCents" | "providerRef" | "provider">): string | null {
   if (payment.provider !== providerName) return `event is from ${providerName} but the payment was made with ${payment.provider}`;
   const f = event.facts;
-  if (f?.currency && f.currency !== "USD") return `currency ${f.currency} (expected USD)`;
-  if ((event.kind === "succeeded" || event.kind === "processing") && f?.amountCents != null && f.amountCents !== payment.amountCents)
-    return `amount ${formatCents(f.amountCents)} (expected ${formatCents(payment.amountCents)})`;
   if (providerName === "PAYPAL") {
-    if (event.kind === "succeeded" && f?.amountCents == null) return "PayPal did not report the captured amount";
     const refs = [f?.orderId, event.providerRef].filter((r): r is string => !!r);
     if (!payment.providerRef || !refs.includes(payment.providerRef)) return "it belongs to a different PayPal order";
   }
+  if (f?.currency && f.currency !== "USD") return `currency ${f.currency} (expected USD)`;
+  if ((event.kind === "succeeded" || event.kind === "processing") && f?.amountCents != null && f.amountCents !== payment.amountCents)
+    return `amount ${formatCents(f.amountCents)} (expected ${formatCents(payment.amountCents)})`;
+  if (providerName === "PAYPAL" && event.kind === "succeeded" && f?.amountCents == null) return "PayPal did not report the captured amount";
   return null;
 }
 
@@ -455,5 +455,5 @@ export async function cancelRedirectPayment(user: { id: string }, paymentId: str
   const payment = await prisma.payment.findUnique({ where: { id: paymentId }, include: { resident: { select: { userId: true } } } });
   if (!payment || payment.resident.userId !== user.id || payment.status !== "PENDING") return;
   if (payment.provider === "OFFLINE") return;
-  await applyProviderEvent(payment.provider, { kind: "canceled", paymentId: payment.id, providerRef: null, eventId: `return:${payment.id}:canceled` });
+  await applyProviderEvent(payment.provider, { kind: "canceled", paymentId: payment.id, providerRef: payment.providerRef, eventId: `return:${payment.id}:canceled` });
 }

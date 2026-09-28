@@ -42,6 +42,7 @@ and the server sends via APNs (`src/lib/push/apns.ts`). Your job is the native p
 - Sign out → the device stops receiving that resident's pushes (`push_subscriptions.disabled_at` set).
 
 ## Ship
+- `npm run ios:sync` (with `PORTAL_URL=<live portal>` unless using portal.legacyindependentliving.net), then **`npm run ios:preflight` must pass** before archiving.
 - Product → Archive → Distribute → App Store Connect. Switch `APNS_ENV=production` on the server for TestFlight/App Store builds.
 - Screenshots, listing copy, privacy answers and review notes: `../docs/store/APP_STORE.md` (sizes already exact).
 - Privacy policy URL: `https://<portal>/privacy`. Account deletion: Profile → Delete my account (Guideline 5.1.1(v)).

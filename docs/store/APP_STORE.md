@@ -63,11 +63,25 @@ CI re-seeds demo data, captures every device, and commits the results. List of s
 **Marketing URL**: `https://legacyindependentliving.net`
 **Privacy Policy URL**: `https://portal.legacyindependentliving.net/privacy` (built into the portal — review the wording before submitting).
 
-## App Review notes (paste into "Notes" + sign-in info)
+## App Review — sign-in + notes
 
-- Sign-in required. Provide a **review account** (create a resident in the owner portal and set a password), plus an owner account if you want reviewers to see the owner side.
-- Accounts are created by the housing provider; there is no public sign-up (explain this in the notes — it's allowed for apps serving existing customers).
-- Rent is a payment for real-world housing, so PayPal (not in-app purchase) is correct under App Review Guideline 3.1.3(e)/3.1.5.
+**1. Create the review account (once; re-run any time to reset its password):**
+```bash
+REVIEW_PASSWORD='choose-a-long-password-1' npm run review:account     # via `railway run` against production
+```
+It creates `appreview@legacyindependentliving.net` in a clearly labelled **"App Review test home (not a real home)"** with $1.00/month rent and a $1.00 sample charge. It's tagged *Demo* and left out of your dashboard and report totals.
+
+**2. App Store Connect → App Review Information:** Sign-in required ✓ — username `appreview@legacyindependentliving.net`, the password you chose. Contact: your name, (713) 482-9021, service@legacyindependentliving.net.
+
+**3. Notes (paste as-is):**
+> Legacy Independent Living provides rooms in shared homes in Houston, TX for veterans and people leaving homelessness. This app is for our existing residents and office staff: residents see what they owe, pay rent, get receipts, report repairs with photos and receive notifications. Accounts are created by our office when a resident moves in, so there is no public sign-up (prospective residents can apply at /apply from the login screen).
+>
+> Review account: a test resident in a test home (not a real property) with a $1.00 balance.
+> • Pay rent: Home → Pay rent → Continue to PayPal. Rent is payment for real-world housing, so it is processed by PayPal and not In-App Purchase (Guideline 3.1.5(a)). You may cancel on PayPal's page; if you complete it, $1.00 is charged and we refund it.
+> • Repairs: Repairs → Report a problem → take or choose a photo (camera / photo library permission).
+> • Notifications: Notifications → Turn on notifications → then "Send a test notification".
+> • Account deletion: Profile → Delete my account (request is confirmed by the office; payment records are kept as required by law, as stated in the privacy policy).
+> • Password change: Profile → Change password.
 
 ## App Privacy ("nutrition label") answers
 
@@ -79,7 +93,11 @@ Data linked to the user, used for App Functionality only, **not** used for track
 
 No third-party advertising, no tracking, no data sold.
 
-## Before you submit — iOS wrapper
+## Before you submit — iOS build
+
+Run `npm run ios:preflight` in `native/` right before archiving: it fails if the build points at the wrong server, the portal/privacy pages don't load, or a permission string / push entitlement is missing.
+
+### iOS wrapper
 
 The native shell is ready in `native/` (Capacitor 7, loads the production portal, native push via APNs, camera/photo permissions for repair photos). Build it with Claude Code in VS Code on a Mac by following `native/CLAUDE.md`. Guideline 4.2 (minimum functionality) is covered by sign-in, payments, repair requests with photos, and native push notifications.
 

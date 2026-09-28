@@ -80,15 +80,27 @@ export function sortByUrgency(rows: ResidentRow[]): ResidentRow[] {
   );
 }
 
+/**
+ * Demo / App Review records (isDemo) stay visible in lists — tagged "Demo" — but
+ * once real homes exist they are left out of the owner's totals, so the App
+ * Review test home never skews occupancy, rent due or collection numbers.
+ * (A demo-only database keeps showing its demo numbers.)
+ */
+export async function metricsScope(): Promise<{ excludeDemo: boolean; resident: Prisma.ResidentWhereInput; property: Prisma.PropertyWhereInput }> {
+  const excludeDemo = (await prisma.property.count({ where: { isDemo: false, archivedAt: null } })) > 0;
+  return excludeDemo ? { excludeDemo, resident: { isDemo: false }, property: { isDemo: false } } : { excludeDemo, resident: {}, property: {} };
+}
+
 export async function adminDashboard(today: DateOnly) {
   const month = monthKey(today);
+  const scope = await metricsScope();
   const [rooms, rows, ledgers, pendingApps, recentPayments] = await Promise.all([
-    prisma.room.findMany({ where: { property: { archivedAt: null } }, select: { status: true } }),
-    residentRows(today, { status: "ACTIVE" }),
-    prisma.resident.findMany({ select: { ledgerEntries: true } }),
+    prisma.room.findMany({ where: { property: { archivedAt: null, ...scope.property } }, select: { status: true } }),
+    residentRows(today, { status: "ACTIVE", ...scope.resident }),
+    prisma.resident.findMany({ where: scope.resident, select: { ledgerEntries: true } }),
     prisma.application.count({ where: { status: { in: ["NEW", "UNDER_REVIEW"] } } }),
     prisma.payment.findMany({
-      where: { status: { in: ["SUCCEEDED", "PROCESSING"] } },
+      where: { status: { in: ["SUCCEEDED", "PROCESSING"] }, resident: scope.resident },
       orderBy: [{ paidOn: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
       take: 5,
       include: { resident: { select: { firstName: true, lastName: true } } },
@@ -272,17 +284,19 @@ function addHoursUtc(d: Date, hours: number) {
 
 export async function reports(today: DateOnly, f: { month?: string; propertyId?: string }) {
   const month = f.month && /^\d{4}-\d{2}$/.test(f.month) ? f.month : monthKey(today);
-  const residentWhere: Prisma.ResidentWhereInput = f.propertyId
-    ? { assignments: { some: { room: { propertyId: f.propertyId } } } }
-    : {};
+  const scope = await metricsScope();
+  const residentWhere: Prisma.ResidentWhereInput = {
+    ...scope.resident,
+    ...(f.propertyId ? { assignments: { some: { room: { propertyId: f.propertyId } } } } : {}),
+  };
   const [ledgers, rooms, rows, properties] = await Promise.all([
     prisma.resident.findMany({ where: residentWhere, select: { ledgerEntries: true } }),
     prisma.room.findMany({
-      where: { property: { archivedAt: null, ...(f.propertyId ? { id: f.propertyId } : {}) } },
+      where: { property: { archivedAt: null, ...scope.property, ...(f.propertyId ? { id: f.propertyId } : {}) } },
       select: { status: true, propertyId: true },
     }),
     residentRows(today, residentWhere),
-    prisma.property.findMany({ where: { archivedAt: null }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.property.findMany({ where: { archivedAt: null, ...scope.property }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   const collection = collectionMetrics(ledgers.map((l) => ({ lines: l.ledgerEntries.map(toLine) })), month, today);
   const occupancy = occupancyMetrics(rooms);

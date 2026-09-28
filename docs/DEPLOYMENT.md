@@ -16,6 +16,7 @@ The portal is a standard Next.js 15 server app + PostgreSQL. It does **not** run
 | `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` | developer.paypal.com → Apps & Credentials |
 | `PAYPAL_WEBHOOK_ID` | the ID of the webhook created in step 6 |
 | `CRON_SECRET` | `openssl rand -hex 32` |
+| `TRUSTED_PROXY_HOPS` | `1` on Railway (default). Set `2` only if Cloudflare's orange-cloud proxy sits in front. |
 | `STORAGE_DIR` | path on the persistent volume |
 | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | `npm run push:keys` (once — never rotate casually) |
 | `APNS_KEY_ID` / `APNS_TEAM_ID` / `APNS_BUNDLE_ID` / `APNS_PRIVATE_KEY` / `APNS_ENV` | see §9 (native iOS app only) |

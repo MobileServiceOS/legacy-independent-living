@@ -28,7 +28,8 @@
 4. **PayPal:** Business account → app → webhook → `PAYPAL_ENV=sandbox`, pay rent with a sandbox buyer, refund it; then switch to `live`.
 5. **Push:** `npm run push:keys` → VAPID vars. Apple: create an APNs key → `APNS_*` vars.
 6. **iOS app:** open the repo in VS Code on the Mac, ask Claude Code to "follow native/CLAUDE.md". It needs your Apple team in Xcode.
-7. **App Store Connect:** listing copy, screenshots, privacy answers, review account — all in `docs/store/APP_STORE.md`.
+7. **App Store Connect:** listing copy, screenshots, privacy answers, review notes — `docs/store/APP_STORE.md`. Review login: `REVIEW_PASSWORD=… npm run review:account`. Before archiving: `npm run ios:preflight` in `native/`.
+8. **Security checklist:** `docs/SECURITY.md` → Operational checklist.
 
 ## Known MVP limits (deliberate, not bugs)
 - **No outgoing email/SMS yet.** Invites and reset links are copied by staff and sent by text/email by hand. Adding email = one `ChannelAdapter` (e.g. Resend/Postmark); the queue already exists.
