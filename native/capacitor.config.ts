@@ -32,7 +32,7 @@ const config: CapacitorConfig = {
     // of racing on independent timers (which could let this hide before or after the web
     // splash ever became visible). launchShowDuration here is only a failsafe in case the
     // webview never loads far enough to run that call.
-    SplashScreen: { launchAutoHide: true, launchShowDuration: 2200, backgroundColor: "#fbf8f1", showSpinner: false },
+    SplashScreen: { launchAutoHide: true, launchShowDuration: 3400, backgroundColor: "#fbf8f1", showSpinner: false },
   },
 };
 

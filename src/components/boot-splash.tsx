@@ -101,13 +101,13 @@ export function BootSplash() {
             // was happening here (900ms / 550ms), making the whole splash read as static.
             // Always give the full sequence (glow, art, word, shine, plus a visible float/walk
             // cycle) room to actually play before starting the fade.
-            var MIN_VISIBLE = 2300;
+            var MIN_VISIBLE = 3400;
             if (document.readyState === 'complete') {
               setTimeout(hide, MIN_VISIBLE);
             } else {
               window.addEventListener('load', function(){ setTimeout(hide, MIN_VISIBLE); });
             }
-            setTimeout(hide, 4200); // failsafe if 'load' never fires (e.g. offline)
+            setTimeout(hide, 5200); // failsafe if 'load' never fires (e.g. offline)
           })();
         `,
         }}
