@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { AdminNav, type NavItem } from "@/components/nav";
+import { AdminNav, AdminTabBar, type NavItem } from "@/components/nav";
 import { SignOutButton } from "@/components/push-controls";
 import { requirePagePermission } from "@/lib/auth/session";
 import { prisma } from "@/lib/db";
@@ -16,12 +16,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     prisma.property.count({ where: { isDemo: true } }),
   ]);
   const items: NavItem[] = [
-    { href: "/admin", label: "Dashboard", icon: "grid", exact: true },
+    { href: "/admin", label: "Dashboard", icon: "grid", exact: true, primary: true },
     { href: "/admin/properties", label: "Properties", icon: "building" },
-    { href: "/admin/residents", label: "Residents", icon: "users" },
+    { href: "/admin/residents", label: "Residents", icon: "users", primary: true },
     { href: "/admin/applications", label: "Applications", icon: "inbox", badge: newApps },
-    { href: "/admin/maintenance", label: "Maintenance", icon: "wrench", badge: newRepairs },
-    { href: "/admin/payments", label: "Payments", icon: "dollar" },
+    { href: "/admin/maintenance", label: "Maintenance", icon: "wrench", badge: newRepairs, primary: true },
+    { href: "/admin/payments", label: "Payments", icon: "dollar", primary: true },
     { href: "/admin/reports", label: "Reports", icon: "chart" },
     { href: "/admin/notifications", label: "Notifications", icon: "bell", badge: unread },
     { href: "/admin/settings", label: "Settings", icon: "cog" },
@@ -40,13 +40,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
         <div className="px-3 pb-3 md:pb-6">
           <AdminNav items={items} />
-          <div className="mt-4 border-t border-white/15 pt-4 md:mt-8">
+          <div className="hidden md:mt-8 md:block border-t border-white/15 pt-4">
             <p className="truncate px-3 text-sm text-white/70">{user.name}</p>
             <SignOutButton action={logoutAction} label="Sign out" className="mt-1 flex min-h-11 w-full items-center gap-3 rounded-lg px-3 font-bold text-white/80 hover:bg-white/10 hover:text-white" />
           </div>
         </div>
       </aside>
-      <div className="min-w-0">
+      <div className="min-w-0 pb-20 md:pb-0">
         {demo > 0 ? (
           <div data-demo className="no-print border-b border-warn/20 bg-warn-bg px-4 py-2 text-center text-sm font-semibold text-warn">
             Demo data is loaded. Records marked <span className="rounded border border-dashed border-trunk/50 px-1 text-[0.7rem] uppercase text-trunk">Demo</span> are
@@ -57,6 +57,16 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           {children}
         </main>
       </div>
+      <AdminTabBar
+        items={items}
+        signOut={
+          <SignOutButton
+            action={logoutAction}
+            label="Sign out"
+            className="flex min-h-12 w-full items-center gap-3 rounded-lg px-3 font-bold text-ink hover:bg-paper-2"
+          />
+        }
+      />
     </div>
   );
 }
