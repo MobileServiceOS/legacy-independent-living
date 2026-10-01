@@ -2,13 +2,36 @@ import UIKit
 import Capacitor
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, UIWindowSceneDelegate {
 
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
         return true
+    }
+
+    // MARK: UIScene lifecycle
+    // iOS 13+ apps must adopt the scene lifecycle; newer OS versions (e.g. iPadOS 27)
+    // crash on launch (EXC_BREAKPOINT in
+    // ___UIApplicationEvaluateRuntimeIssueForNoSceneLifecycleAdoption_block_invoke)
+    // if no scene delegate is configured. This app has no multi-window/scene needs,
+    // so AppDelegate itself acts as the single scene's delegate (see Info.plist's
+    // UIApplicationSceneManifest, which points UISceneDelegateClassName at this class)
+    // rather than adding a separate SceneDelegate.swift file + Xcode project entry.
+    func application(_ application: UIApplication, configurationForConnecting connectingSceneSession: UISceneSession, options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let config = UISceneConfiguration(name: "Default Configuration", sessionRole: connectingSceneSession.role)
+        config.delegateClass = AppDelegate.self
+        return config
+    }
+
+    func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
+        guard let windowScene = scene as? UIWindowScene else { return }
+        let window = UIWindow(windowScene: windowScene)
+        let storyboard = UIStoryboard(name: "Main", bundle: nil)
+        window.rootViewController = storyboard.instantiateInitialViewController()
+        window.makeKeyAndVisible()
+        self.window = window
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
