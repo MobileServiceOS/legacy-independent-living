@@ -24,7 +24,7 @@ function isActive(pathname: string, item: NavItem) {
 export function ResidentTabBar({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+    <nav aria-label="Main" className="no-print fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden">
       <ul className="grid grid-cols-5">
         {items.filter((i) => !i.desktopOnly).map((item) => {
           const active = isActive(pathname, item);
@@ -56,7 +56,7 @@ export function ResidentTabBar({ items }: { items: NavItem[] }) {
 export function TopNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   return (
-    <nav aria-label="Main" className="hidden md:block">
+    <nav aria-label="Main" className="hidden lg:block">
       <ul className="flex gap-1">
         {items.map((item) => {
           const active = isActive(pathname, item);

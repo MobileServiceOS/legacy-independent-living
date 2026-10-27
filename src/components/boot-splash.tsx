@@ -26,6 +26,7 @@ export function BootSplash() {
           __html: `
           #boot-splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#fbf8f1;overflow:hidden;transition:opacity .16s ease-out;opacity:1;pointer-events:auto}
           #boot-splash.boot-splash-out{opacity:0;pointer-events:none}
+          #boot-splash.boot-splash-skip{display:none}
           #boot-splash .bs-glow{position:absolute;width:min(90vw,420px);height:min(90vw,420px);border-radius:50%;background:radial-gradient(circle,rgba(74,85,51,.16) 0%,rgba(74,85,51,0) 68%);opacity:0;animation:bsGlowIn 1.8s ease-out .1s forwards}
           #boot-splash .bs-scene{position:relative;display:flex;flex-direction:column;align-items:center;padding:0 8vw}
           #boot-splash .bs-art-wrap{position:relative;opacity:0;transform:scale(.88) translateY(8px);animation:bsArtIn .6s cubic-bezier(.2,.8,.3,1.1) .08s forwards}
@@ -88,6 +89,18 @@ export function BootSplash() {
               if (Capacitor && Capacitor.Plugins && Capacitor.Plugins.SplashScreen) {
                 Capacitor.Plugins.SplashScreen.hide();
               }
+            } catch (e) {}
+            // The splash belongs to app launch, not to every full page load (login redirects,
+            // Stripe returns, hard navigations). Re-showing a 3.4s opaque overlay on those made
+            // the app look frozen, so after the first one in a session it is removed instantly.
+            try {
+              if (window.sessionStorage.getItem('bootSplashShown') === '1') {
+                // Hide, don't remove: this runs before React hydrates, and a missing
+                // server-rendered node would cause a hydration mismatch.
+                el.className = 'boot-splash-skip';
+                return;
+              }
+              window.sessionStorage.setItem('bootSplashShown', '1');
             } catch (e) {}
             var hidden = false;
             function hide(){
