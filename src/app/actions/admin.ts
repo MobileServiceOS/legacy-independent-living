@@ -128,7 +128,7 @@ export async function addLedgerEntryAction(prev: ActionState, fd: FormData): Pro
 }
 
 export async function moveOutAction(prev: ActionState, fd: FormData): Promise<ActionState> {
-  return runAction(prev, fd, moveOutSchema.extend({ confirm: z.literal("on", { errorMap: () => ({ message: "Please confirm the move-out" }) }) }), async ({ confirm: _c, ...input }) => {
+  return runAction(prev, fd, moveOutSchema.extend({ confirm: z.literal("on", { error: "Please confirm the move-out" }) }), async ({ confirm: _c, ...input }) => {
     const user = await requireActionPermission("residents:write");
     await moveOutResident(actorOf(user), input);
     refreshAdmin();
@@ -165,7 +165,7 @@ export async function recordOfflinePaymentAction(prev: ActionState, fd: FormData
 }
 
 export async function refundPaymentAction(prev: ActionState, fd: FormData): Promise<ActionState> {
-  return runAction(prev, fd, refundSchema.extend({ confirm: z.literal("on", { errorMap: () => ({ message: "Please confirm the refund" }) }) }), async ({ paymentId, reason }) => {
+  return runAction(prev, fd, refundSchema.extend({ confirm: z.literal("on", { error: "Please confirm the refund" }) }), async ({ paymentId, reason }) => {
     const user = await requireActionPermission("payments:refund");
     await refundPayment(actorOf(user), { paymentId, reason });
     refreshAdmin();

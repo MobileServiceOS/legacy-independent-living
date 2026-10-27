@@ -53,7 +53,7 @@ export async function cancelMaintenanceAction(prev: ActionState, fd: FormData): 
   const schema = z.object({
     requestId: id,
     reason: z.string().trim().max(500).optional().transform((v) => (v ? v : null)),
-    confirm: z.literal("on", { errorMap: () => ({ message: "Please confirm" }) }),
+    confirm: z.literal("on", { error: "Please confirm" }),
   });
   return runAction(prev, fd, schema, async ({ requestId, reason }) => {
     const user = await requireResidentMaintenance();

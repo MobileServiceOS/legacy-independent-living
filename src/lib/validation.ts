@@ -71,7 +71,7 @@ export const dollarsOrZero = (label = "Amount") =>
 
 const intIn = (label: string, min: number, max: number) =>
   z.coerce
-    .number({ invalid_type_error: `${label} must be a number` })
+    .number({ error: `${label} must be a number` })
     .int(`${label} must be a whole number`)
     .min(min, `${label} must be at least ${min}`)
     .max(max, `${label} must be at most ${max}`);
@@ -124,7 +124,7 @@ export const applicationSchema = z.object({
     .max(30)
     .optional()
     .transform((v) => (v ? v : null)),
-  consent: z.literal("on", { errorMap: () => ({ message: "Please confirm the information is accurate" }) }),
+  consent: z.literal("on", { error: "Please confirm the information is accurate" }),
   website: z.string().max(0, "Please leave this field empty").optional(), // honeypot
 });
 
@@ -231,7 +231,7 @@ const ONLINE_METHOD_VALUES = ["PAYPAL", "ACH", "DEBIT_CARD", "CREDIT_CARD", "CAS
 
 export const onlinePaymentSchema = z.object({
   amount: dollars(),
-  method: z.enum(ONLINE_METHOD_VALUES, { errorMap: () => ({ message: "Choose how you'd like to pay" }) }),
+  method: z.enum(ONLINE_METHOD_VALUES, { error: "Choose how you'd like to pay" }),
 });
 
 export const refundSchema = z.object({ paymentId: id, reason: required("Reason", 300) });
@@ -284,7 +284,7 @@ export const announcementSchema = z.object({
 
 // ---------------------------------------------------------------- maintenance
 export const maintenanceRequestSchema = z.object({
-  category: z.enum(MAINTENANCE_CATEGORIES, { errorMap: () => ({ message: "Choose what kind of problem it is" }) }),
+  category: z.enum(MAINTENANCE_CATEGORIES, { error: "Choose what kind of problem it is" }),
   priority: z.enum(MAINTENANCE_PRIORITIES).default("NORMAL"),
   title: required("A short summary", 120),
   description: required("Description", 4000),

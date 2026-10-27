@@ -38,7 +38,7 @@ export async function sandboxOutcomeAction(prev: ActionState, formData: FormData
 export async function requestDeletionAction(prev: ActionState, formData: FormData): Promise<ActionState> {
   const schema = z.object({
     reason: z.string().trim().max(500).optional().transform((v) => (v ? v : null)),
-    confirm: z.literal("on", { errorMap: () => ({ message: "Please confirm" }) }),
+    confirm: z.literal("on", { error: "Please confirm" }),
   });
   return runAction(prev, formData, schema, async ({ reason }) => {
     const user = await requireResidentAction();
