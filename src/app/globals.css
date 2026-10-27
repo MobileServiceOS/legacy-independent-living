@@ -66,6 +66,15 @@
   textarea {
     font-size: 1rem; /* ≥16px stops iOS zoom-on-focus */
   }
+  /* iOS date inputs ignore width:100% and overflow their card without this. */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    min-width: 0;
+    max-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -87,7 +96,7 @@
   @apply btn border border-forest/30 bg-white text-forest hover:bg-paper-2;
 }
 @utility btn-danger {
-  @apply btn border border-bad/30 bg-white text-bad hover:bg-bad-bg;
+  @apply btn border-2 border-bad/60 bg-bad-bg text-bad hover:bg-bad/10;
 }
 @utility btn-sm {
   @apply min-h-10! rounded-lg! px-3! text-sm!;

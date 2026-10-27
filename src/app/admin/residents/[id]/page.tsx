@@ -443,7 +443,7 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
                   <Input name="moveOutDate" type="date" label="Move-out date" defaultValue={today} required />
                   <Input name="reason" label="Reason / notes" />
                   <Checkbox name="confirm" label="Confirm move-out" hint="Frees the room and stops future rent. Rent posted for after this date is reversed. Payment and ledger history is kept." />
-                  <SubmitButton small variant="danger">
+                  <SubmitButton variant="danger" pendingText="Moving out…" className="w-full min-h-14! border-bad! bg-bad! text-lg text-white! hover:bg-bad/90!">
                     Move out
                   </SubmitButton>
                 </ActionForm>
