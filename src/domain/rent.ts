@@ -37,6 +37,12 @@ export interface RentScheduleInput {
   dueDay: number;
   startDate: DateOnly;
   endDate?: DateOnly | null;
+  /**
+   * Set only on a resident's FIRST schedule (their move-in). When the move-in date falls after that
+   * month's due day, the first charge covers only the days from move-in up to the next due date,
+   * prorated by day, instead of a full month. Rent changes mid-stay never set this.
+   */
+  prorateFirstPeriod?: boolean;
 }
 
 export interface PlannedRentCharge {
@@ -78,6 +84,7 @@ export function planRentCharges(
     if (dueDate > horizon) break;
     if (schedule.endDate && dueDate > schedule.endDate) break;
     const period = monthKey(dueDate);
+    const stub = i === 0 && schedule.prorateFirstPeriod ? firstPeriodProration(schedule, nominalDue, y, m) : null;
     out.push({
       idempotencyKey: rentKey(schedule.residentId, period),
       scheduleId: schedule.id,
@@ -86,12 +93,38 @@ export function planRentCharges(
       dueDate,
       // Posted up to chargeLeadDays early, but dated on the due date so the ledger reads "Oct 1 — Monthly rent".
       effectiveDate: dueDate,
-      amountCents: schedule.monthlyRentCents,
-      description: `Monthly rent — ${period}`,
+      amountCents: stub ? stub.amountCents : schedule.monthlyRentCents,
+      description: stub ? stub.description : `Monthly rent — ${period}`,
     });
   }
   // keep only the most recent MAX_BACKFILL_MONTHS periods as a safety valve
   return out.slice(-MAX_BACKFILL_MONTHS);
+}
+
+/**
+ * Prorated first charge for a move-in that lands after the month's due day: rent for the days from
+ * move-in through the day before the next due date, at monthly rent × days ÷ days in that rent period
+ * (due date to next due date), rounded to the nearest cent. Null when no proration applies
+ * (move-in on or before the due day → a normal full-month charge).
+ */
+function firstPeriodProration(
+  schedule: RentScheduleInput,
+  nominalDue: DateOnly,
+  y: number,
+  m: number,
+): { amountCents: Cents; description: string } | null {
+  if (schedule.startDate <= nominalDue) return null;
+  const next = addMonths(y, m, 1);
+  const nextDue = dueDateFor(next.y, next.m, schedule.dueDay);
+  const periodDays = diffDays(nextDue, nominalDue);
+  const stubDays = diffDays(nextDue, schedule.startDate);
+  if (periodDays <= 0 || stubDays <= 0 || stubDays >= periodDays) return null;
+  const amountCents = Math.round((schedule.monthlyRentCents * stubDays) / periodDays);
+  const last = addDays(nextDue, -1);
+  return {
+    amountCents,
+    description: `Prorated rent — ${schedule.startDate} to ${last} (${stubDays} of ${periodDays} days)`,
+  };
 }
 
 export interface PlannedLateFee {

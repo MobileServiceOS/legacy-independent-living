@@ -25,8 +25,10 @@ async function postForResident(db: Db, residentId: string, today: DateOnly, sett
   let charges = 0;
   let fees = 0;
   const schedules = await db.rentSchedule.findMany({ where: { residentId }, orderBy: { startDate: "asc" } });
-  for (const s of schedules) {
-    for (const plan of planRentCharges(toScheduleInput(s), today, settings)) {
+  for (const [index, s] of schedules.entries()) {
+    // Only the first schedule (move-in) prorates its partial first month; rent changes never do.
+    const input = { ...toScheduleInput(s), prorateFirstPeriod: index === 0 };
+    for (const plan of planRentCharges(input, today, settings)) {
       const exists = await db.ledgerEntry.findUnique({ where: { idempotencyKey: plan.idempotencyKey }, select: { id: true } });
       if (exists) continue;
       await postLedgerEntry(db, null, {

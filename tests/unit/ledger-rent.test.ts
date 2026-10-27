@@ -112,6 +112,47 @@ describe("rent charge planning", () => {
     );
   });
 
+  test("prorates a mid-month first move-in by day, then bills full rent on the due day", () => {
+    const s = { ...schedule, startDate: "2026-10-15", prorateFirstPeriod: true };
+    const planned = planRentCharges(s, "2026-11-01", { chargeLeadDays: 0 });
+    assert.deepEqual(
+      planned.map((p) => [p.period, p.dueDate, p.amountCents]),
+      [
+        ["2026-10", "2026-10-15", Math.round((75000 * 17) / 31)], // Oct 15–31 = 17 of 31 days
+        ["2026-11", "2026-11-01", 75000],
+      ],
+    );
+    assert.match(planned[0]!.description, /^Prorated rent — 2026-10-15 to 2026-10-31 \(17 of 31 days\)$/);
+  });
+
+  test("proration: Oct 27 move-in with due day 1 is 5 days, not a full month (the $1,600 bug)", () => {
+    const s = { ...schedule, monthlyRentCents: 80000, startDate: "2026-10-27", prorateFirstPeriod: true };
+    const planned = planRentCharges(s, "2026-10-27", { chargeLeadDays: 7 });
+    assert.deepEqual(planned.map((p) => p.amountCents), [Math.round((80000 * 5) / 31), 80000]);
+    assert.ok(planned[0]!.amountCents + planned[1]!.amountCents < 2 * 80000);
+  });
+
+  test("proration uses the real length of the rent period (February)", () => {
+    const s = { ...schedule, startDate: "2027-02-10", prorateFirstPeriod: true };
+    const [first] = planRentCharges(s, "2027-02-10", { chargeLeadDays: 0 });
+    assert.equal(first!.amountCents, Math.round((75000 * 19) / 28));
+  });
+
+  test("no proration when moving in on the due day, or when the flag is off (rent changes)", () => {
+    const onDue = planRentCharges({ ...schedule, startDate: "2026-10-01", prorateFirstPeriod: true }, "2026-10-01", { chargeLeadDays: 0 });
+    assert.equal(onDue[0]!.amountCents, 75000);
+    const flagOff = planRentCharges({ ...schedule, startDate: "2026-10-15" }, "2026-10-15", { chargeLeadDays: 0 });
+    assert.equal(flagOff[0]!.amountCents, 75000);
+  });
+
+  test("proration is idempotent: same keys on every run, one charge per month", () => {
+    const s = { ...schedule, startDate: "2026-10-15", prorateFirstPeriod: true };
+    const a = planRentCharges(s, "2026-12-01", { chargeLeadDays: 0 });
+    const b = planRentCharges(s, "2026-12-01", { chargeLeadDays: 0 });
+    assert.deepEqual(a, b);
+    assert.equal(new Set(a.map((p) => p.idempotencyKey)).size, a.length);
+  });
+
   test("due day 31 clamps in short months", () => {
     const s = { ...schedule, dueDay: 31, startDate: "2027-01-31" };
     assert.deepEqual(

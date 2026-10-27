@@ -45,7 +45,7 @@ Integrity rules enforced **in PostgreSQL** (see `prisma/migrations/0001_init/mig
 
 `src/domain/rent.ts` decides; `src/server/rent-engine.ts` writes.
 
-- **Charges**: for each schedule, every month from move-in whose due date is within `chargeLeadDays` (default 7) of today. First month's due date is never before move-in. Days 29–31 clamp. Stops at schedule end (rent change / move-out).
+- **Charges**: for each schedule, every month from move-in whose due date is within `chargeLeadDays` (default 7) of today. First month's due date is never before move-in. Days 29–31 clamp. **Proration:** on a resident's first (move-in) schedule only, a move-in after that month's due day is charged just the days from move-in to the next due date (`monthly × days ÷ days in the rent period`, nearest cent, description "Prorated rent — …"); the next due date is a full month. Move-in on/before the due day, and mid-stay rent changes, are never prorated. Stops at schedule end (rent change / move-out).
 - **Rent changes** end the current schedule the day before the new one starts; months already posted keep their amount (add an adjustment if needed).
 - **Late fees**: optional; one per rent charge still unpaid `graceDays` after its due date.
 - **Status** (`deriveRentPosition`), precedence: `PAID` (balance ≤ 0) → `PENDING` (in-flight ACH covers balance) → `OVERDUE` (oldest unpaid due date passed) → `PARTIAL` (oldest open charge part-paid) → `DUE` (due today) → `DUE_SOON`.

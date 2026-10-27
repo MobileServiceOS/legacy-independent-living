@@ -298,8 +298,8 @@ describe("pay ahead: overpaying banks a credit that auto-applies to future rent"
       notes: null,
     });
     const room = await m.props.saveRoom(actor, { propertyId: property.id, name: "Ahead Room", defaultRent: 50000, notes: null });
-    // Mid-month due day so the 7-day lead window doesn't also pull in October at move-in —
-    // exactly one month's rent (September) is due today.
+    // Due day == move-in day, so the first charge is a full month (no proration) and the 7-day lead
+    // window doesn't also pull in October — exactly one month's rent (September) is due today.
     const r = await m.residents.placeResident(actor, {
       firstName: "Ada",
       lastName: "Payne",
@@ -312,7 +312,7 @@ describe("pay ahead: overpaying banks a credit that auto-applies to future rent"
       roomId: room.id,
       monthlyRent: 50000,
       moveInDate: TODAY,
-      dueDay: 15,
+      dueDay: 27,
     });
     residentId = r.residentId;
     userId = (await m.prisma.resident.findUniqueOrThrow({ where: { id: residentId } })).userId!;
