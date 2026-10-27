@@ -9,12 +9,17 @@ import { logoutAction } from "@/app/actions/auth";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requirePagePermission("admin:access");
-  const [newApps, newRepairs, unread, demo] = await Promise.all([
+  const [newApps, newRepairs, unread, demoHomes, realHomes] = await Promise.all([
     prisma.application.count({ where: { status: "NEW" } }),
     prisma.maintenanceRequest.count({ where: { status: "SUBMITTED" } }),
     unreadCount(user.id),
     prisma.property.count({ where: { isDemo: true } }),
+    prisma.property.count({ where: { isDemo: false, archivedAt: null } }),
   ]);
+  // The App Review test home stays in the database for Apple's reviewers, so only
+  // show the banner while the portal has no real homes (a demo-only database).
+  // Once real homes exist the demo records are still tagged "Demo" in the lists.
+  const demo = realHomes === 0 ? demoHomes : 0;
   const items: NavItem[] = [
     { href: "/admin", label: "Dashboard", icon: "grid", exact: true, primary: true },
     { href: "/admin/properties", label: "Properties", icon: "building" },
