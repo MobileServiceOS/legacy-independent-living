@@ -30,7 +30,7 @@ export default async function NewMaintenancePage() {
         <EmergencyNote phone={settings.supportPhone} />
         <Card>
           <p data-testid="repairs-inactive" className="text-[0.95rem]">
-            Repair requests can only be sent for a current stay, and this account is marked as moved out. If that's a mistake, please contact the office
+            Repair requests can only be sent for a current stay, and this account is marked as moved out. If that&apos;s a mistake, please contact the office
             {settings.supportPhone ? <> at <strong>{settings.supportPhone}</strong></> : null}.
           </p>
         </Card>
