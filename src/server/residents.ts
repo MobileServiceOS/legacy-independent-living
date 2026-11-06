@@ -312,6 +312,74 @@ export async function moveOutResident(actor: Actor, input: { residentId: string;
   });
 }
 
+/**
+ * Move a moved-out resident back in: re-assign a room, start a fresh rent
+ * schedule, and flip the resident back to ACTIVE. The User row (email, password,
+ * sign-in status) is deliberately left untouched so an existing login keeps
+ * working. Rent/dueDay default from the resident's most recent schedule.
+ *
+ * Proration note: the rent engine only prorates a resident's *first* schedule
+ * (index 0, ordered by startDate). A reinstated resident already has the
+ * original move-in schedule on file, so the new schedule is never index 0 and
+ * its first month is billed in full — never prorated by day.
+ */
+export async function reinstateResident(
+  actor: Actor,
+  input: { residentId: string; roomId: string; moveInDate: DateOnly; monthlyRent?: number; dueDay?: number },
+) {
+  return prisma.$transaction(async (tx) => {
+    const resident = await lockResident(tx, input.residentId);
+    if (resident.status !== "MOVED_OUT") throw new UserError("Only a moved-out resident can be moved back in");
+    if (resident.moveOutDate) {
+      const movedOut = dateOnlyFromDbDate(resident.moveOutDate);
+      if (input.moveInDate < movedOut) throw new UserError(`Move-in date can't be before the move-out date (${movedOut})`, "moveInDate");
+    }
+
+    const room = await lockRoom(tx, input.roomId);
+    if (room.property.archivedAt) throw new UserError("That property is archived", "roomId");
+    if (!canAssignResident(room.status)) throw new UserError(`${room.name} is ${room.status.toLowerCase()} — choose an available room`, "roomId");
+
+    // Default rent + due day from the most recent schedule on file.
+    const previous = await tx.rentSchedule.findFirst({ where: { residentId: resident.id }, orderBy: [{ startDate: "desc" }, { createdAt: "desc" }] });
+    const monthlyRentCents = input.monthlyRent ?? previous?.monthlyRentCents;
+    const dueDay = input.dueDay ?? previous?.dueDay;
+    if (monthlyRentCents == null || dueDay == null)
+      throw new UserError("Enter the monthly rent and due day — there's no earlier rent schedule to copy from", "monthlyRent");
+
+    const assignment = await tx.roomAssignment.create({
+      data: {
+        residentId: resident.id,
+        roomId: room.id,
+        startDate: dbDateFromDateOnly(input.moveInDate),
+        reason: "Moved back in",
+        createdById: actor.id,
+      },
+    });
+    await tx.room.update({ where: { id: room.id }, data: { status: "OCCUPIED" } });
+    const schedule = await tx.rentSchedule.create({
+      data: {
+        residentId: resident.id,
+        monthlyRentCents,
+        dueDay,
+        startDate: dbDateFromDateOnly(input.moveInDate),
+        createdById: actor.id,
+      },
+    });
+    await tx.resident.update({ where: { id: resident.id }, data: { status: "ACTIVE", moveOutDate: null } });
+    await audit(tx, actor, AUDIT_ACTIONS.residentReinstated, "resident", resident.id, {
+      roomId: room.id,
+      roomAssignmentId: assignment.id,
+      moveInDate: input.moveInDate,
+      monthlyRentCents,
+      dueDay,
+      rentScheduleId: schedule.id,
+    });
+
+    await runRentEngineForResident(tx, resident.id);
+    return { residentId: resident.id, roomAssignmentId: assignment.id, rentScheduleId: schedule.id };
+  });
+}
+
 export async function updateResident(
   actor: Actor,
   input: {

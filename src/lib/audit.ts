@@ -39,6 +39,7 @@ export const AUDIT_ACTIONS = {
   residentCreated: "resident.created",
   residentEdited: "resident.edited",
   residentMovedOut: "resident.moved_out",
+  residentReinstated: "resident.reinstated",
   roomAssigned: "room.assigned",
   roomTransferred: "room.transferred",
   roomStatusChanged: "room.status_changed",

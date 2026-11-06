@@ -1070,3 +1070,102 @@ describe("App Review / demo records stay out of the owner's totals", () => {
     assert.ok((await m.queries.residentRows(TODAY)).some((r) => r.id === residentId && r.isDemo));
   });
 });
+
+describe("reinstate: move a moved-out resident back in, reusing their existing login", () => {
+  let residentId = "";
+  let userId = "";
+  let roomA = "";
+  let roomB = "";
+  let passwordHashBefore = "";
+  let emailBefore = "";
+
+  before(async () => {
+    const property = await m.props.saveProperty(actor, undefined, {
+      name: "Legacy House — Reinstate",
+      addressLine1: "9 Test St", addressLine2: null, city: "Houston", state: "TX", postalCode: "77002", notes: null,
+    });
+    roomA = (await m.props.saveRoom(actor, { propertyId: property.id, name: "Room A", defaultRent: 60000, notes: null })).id;
+    roomB = (await m.props.saveRoom(actor, { propertyId: property.id, name: "Room B", defaultRent: 60000, notes: null })).id;
+
+    const r = await m.residents.placeResident(actor, {
+      firstName: "Max", lastName: "Rivera", email: "max@test.local", phone: "555-010-3009",
+      emergencyContactName: null, emergencyContactPhone: null, emergencyContactRelation: null, notes: null,
+      roomId: roomA, monthlyRent: 60000, moveInDate: "2026-08-10", dueDay: 1,
+    });
+    residentId = r.residentId;
+    // Give them a real password so we can prove it survives reinstatement.
+    const token = (await m.residents.reissueInvite(actor, residentId)).split("/invite/")[1]!;
+    const user = await m.auth.acceptInvite(token, "MaxRivera2026ok");
+    userId = user.id;
+    const u = await m.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    passwordHashBefore = u.passwordHash!;
+    emailBefore = u.email;
+
+    await m.residents.moveOutResident(actor, { residentId, moveOutDate: "2026-09-15", reason: "Temporary" });
+  });
+
+  test("reinstating reuses the room, starts a fresh rent schedule, reactivates — login untouched", async () => {
+    // Omit rent/dueDay on purpose: they default from the most recent schedule.
+    await m.residents.reinstateResident(actor, { residentId, roomId: roomA, moveInDate: "2026-09-20" });
+
+    const r = await m.prisma.resident.findUniqueOrThrow({ where: { id: residentId }, include: { rentSchedules: true, assignments: true } });
+    assert.equal(r.status, "ACTIVE");
+    assert.equal(r.moveOutDate, null);
+
+    // Room occupied again, by this resident.
+    assert.equal((await m.prisma.room.findUniqueOrThrow({ where: { id: roomA } })).status, "OCCUPIED");
+    const activeAssignment = r.assignments.find((a) => a.endDate === null);
+    assert.ok(activeAssignment, "an active room assignment exists");
+    assert.equal(activeAssignment!.roomId, roomA);
+
+    // A fresh active rent schedule exists, defaulted to the previous rent/due day.
+    const activeSchedule = r.rentSchedules.find((s) => s.endDate === null);
+    assert.ok(activeSchedule, "an active rent schedule exists");
+    assert.equal(activeSchedule!.monthlyRentCents, 60000);
+    assert.equal(activeSchedule!.dueDay, 1);
+
+    // The User row is deliberately untouched — same email, same password hash, still active.
+    const user = await m.prisma.user.findUniqueOrThrow({ where: { id: userId } });
+    assert.equal(user.email, emailBefore);
+    assert.equal(user.passwordHash, passwordHashBefore);
+    assert.equal(user.status, "ACTIVE");
+    // They can still sign in with the original password (the whole point for App Review).
+    assert.equal((await m.auth.authenticate("max@test.local", "MaxRivera2026ok")).id, userId);
+
+    // Audited in the same transaction.
+    assert.ok(await m.prisma.auditLog.findFirst({ where: { action: "resident.reinstated", entityId: residentId } }));
+  });
+
+  test("the reinstated mid-month schedule is billed a full month, never prorated by day", async () => {
+    // October (due the 1st) was already charged in full under the original schedule, and move-out
+    // reversed it; because rent charges are keyed per resident-month, reinstating mid-September does
+    // not re-post or prorate October.
+    const oct = await m.prisma.ledgerEntry.findUnique({ where: { idempotencyKey: `rent:${residentId}:2026-10` } });
+    assert.equal(oct?.amountCents, 60000, "October stays a full month");
+    assert.equal(await m.prisma.ledgerEntry.count({ where: { residentId, type: "RENT_CHARGE", idempotencyKey: `rent:${residentId}:2026-10` } }), 1, "no duplicate October charge");
+
+    // Advance the engine: the new schedule resumes billing November, a full month (proration only
+    // ever applies to a resident's very first schedule, which this is not).
+    await m.rent.runRentEngine({ today: "2026-11-28" });
+    const nov = await m.prisma.ledgerEntry.findUniqueOrThrow({ where: { idempotencyKey: `rent:${residentId}:2026-11` } });
+    assert.equal(nov.amountCents, 60000, "November is a full month, not a by-day proration");
+  });
+
+  test("reinstating an already-active resident is refused", async () => {
+    await assert.rejects(m.residents.reinstateResident(actor, { residentId, roomId: roomA, moveInDate: "2026-09-21" }), /moved-out/);
+  });
+
+  test("reinstating into a room that's already taken is refused", async () => {
+    // Someone else occupies Room B.
+    await m.residents.placeResident(actor, {
+      firstName: "Nia", lastName: "Stone", email: "nia@test.local", phone: "555-010-3010",
+      emergencyContactName: null, emergencyContactPhone: null, emergencyContactRelation: null, notes: null,
+      roomId: roomB, monthlyRent: 60000, moveInDate: "2026-09-01", dueDay: 1,
+    });
+    await m.residents.moveOutResident(actor, { residentId, moveOutDate: "2026-09-25", reason: null });
+    await assert.rejects(m.residents.reinstateResident(actor, { residentId, roomId: roomB, moveInDate: "2026-09-26" }), /available room/);
+    // Max is still moved out; Room B is still Nia's.
+    assert.equal((await m.prisma.resident.findUniqueOrThrow({ where: { id: residentId } })).status, "MOVED_OUT");
+    assert.equal((await m.prisma.room.findUniqueOrThrow({ where: { id: roomB } })).status, "OCCUPIED");
+  });
+});

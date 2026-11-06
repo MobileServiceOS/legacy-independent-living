@@ -18,6 +18,7 @@ import {
   placementSchema,
   propertySchema,
   refundSchema,
+  reinstateSchema,
   rentChangeSchema,
   residentEditSchema,
   roomSchema,
@@ -37,6 +38,7 @@ import {
   changeRent,
   moveOutResident,
   placeResident,
+  reinstateResident,
   reissueInvite,
   setSignInEnabled,
   transferRoom,
@@ -133,6 +135,15 @@ export async function moveOutAction(prev: ActionState, fd: FormData): Promise<Ac
     await moveOutResident(actorOf(user), input);
     refreshAdmin();
     return { message: "Resident moved out. Their room is available and their history is kept." };
+  });
+}
+
+export async function reinstateResidentAction(prev: ActionState, fd: FormData): Promise<ActionState> {
+  return runAction(prev, fd, reinstateSchema.extend({ confirm: z.literal("on", { error: "Please confirm the move-in" }) }), async ({ confirm: _c, ...input }) => {
+    const user = await requireActionPermission("residents:write");
+    await reinstateResident(actorOf(user), input);
+    refreshAdmin();
+    return { message: "Resident moved back in. Their room is occupied again and they sign in with their existing login." };
   });
 }
 

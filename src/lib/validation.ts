@@ -209,6 +209,15 @@ export const moveOutSchema = z.object({
   reason: optional(500),
 });
 
+/** Move a moved-out resident back in. Rent + due day default server-side from their last schedule. */
+export const reinstateSchema = z.object({
+  residentId: id,
+  roomId: id,
+  moveInDate: dateOnly("Move-in date"),
+  monthlyRent: blankToUndefined(dollars("Monthly rent").optional()),
+  dueDay: blankToUndefined(intIn("Rent due day", 1, 28).optional()),
+});
+
 export const ledgerEntrySchema = z.object({
   residentId: id,
   kind: z.enum(["OTHER_CHARGE", "LATE_FEE", "CREDIT", "ADJUSTMENT_UP", "ADJUSTMENT_DOWN"]),

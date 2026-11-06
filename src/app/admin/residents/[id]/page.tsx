@@ -37,6 +37,7 @@ import {
   moveOutAction,
   recordOfflinePaymentAction,
   refundPaymentAction,
+  reinstateResidentAction,
   reissueInviteAction,
   setSignInAction,
   simulateAchAction,
@@ -62,6 +63,10 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
   const active = r.status === "ACTIVE";
   const current = r.assignments.find((a) => a.endDate === null);
   const schedule = r.rentSchedules.find((s) => s.endDate === null);
+  // For a moved-out resident: their most recent room/schedule, to pre-fill "Move back in".
+  const lastSchedule = r.rentSchedules[0]; // query orders schedules newest first
+  const previousRoomId = r.assignments[0]?.roomId; // query orders assignments newest first
+  const canReusePreviousRoom = previousRoomId ? rooms.some((x) => x.id === previousRoomId) : false;
   const ledger = withRunningBalance(
     r.ledgerEntries.map((e) => ({
       id: e.id,
@@ -449,6 +454,29 @@ export default async function ResidentProfilePage({ params }: { params: Promise<
                 </ActionForm>
               </Disclosure>
             </>
+          ) : null}
+
+          {r.status === "MOVED_OUT" ? (
+            <Disclosure summary="Move back in" defaultOpen>
+              <ActionForm action={reinstateResidentAction} className="space-y-3">
+                <Hidden name="residentId" value={r.id} />
+                <Select
+                  name="roomId"
+                  label="Room"
+                  placeholder="Choose an available room"
+                  defaultValue={canReusePreviousRoom ? previousRoomId : undefined}
+                  options={rooms.map((x) => ({ value: x.id, label: `${x.propertyName} · ${x.name}` }))}
+                  required
+                />
+                <Input name="moveInDate" type="date" label="Move-in date" defaultValue={today} required />
+                <MoneyInput name="monthlyRent" label="Monthly rent" defaultValue={lastSchedule ? centsToInput(lastSchedule.monthlyRentCents) : undefined} required />
+                <Input name="dueDay" type="number" inputMode="numeric" min={1} max={28} label="Rent due day" defaultValue={lastSchedule?.dueDay ?? 1} required />
+                <Checkbox name="confirm" label="Confirm move-in" hint="Re-assigns the room, starts rent again, and reactivates the account. Their existing email and password keep working." />
+                <SubmitButton pendingText="Moving in…" className="w-full min-h-14! text-lg">
+                  Move back in
+                </SubmitButton>
+              </ActionForm>
+            </Disclosure>
           ) : null}
 
           <Card title="Activity" className="mt-4">
