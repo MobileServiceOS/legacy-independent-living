@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { ActionForm, Checkbox, Input, RadioCards, Select, SubmitButton, Textarea } from "@/components/form";
 import { PhotoInput } from "@/components/photo-input";
 import { BackLink, Card } from "@/components/ui";
@@ -22,7 +21,21 @@ export default async function NewMaintenancePage() {
     }),
     getSettings(),
   ]);
-  if (resident.status !== "ACTIVE") redirect("/maintenance");
+  // Never bounce silently: a button that "does nothing" looks like a frozen app. Say why instead.
+  if (resident.status !== "ACTIVE")
+    return (
+      <div className="space-y-5">
+        <BackLink href="/maintenance">Repairs</BackLink>
+        <h1 className="text-4xl">Report a problem</h1>
+        <EmergencyNote phone={settings.supportPhone} />
+        <Card>
+          <p data-testid="repairs-inactive" className="text-[0.95rem]">
+            Repair requests can only be sent for a current stay, and this account is marked as moved out. If that's a mistake, please contact the office
+            {settings.supportPhone ? <> at <strong>{settings.supportPhone}</strong></> : null}.
+          </p>
+        </Card>
+      </div>
+    );
   const room = resident.assignments[0]?.room;
 
   return (
